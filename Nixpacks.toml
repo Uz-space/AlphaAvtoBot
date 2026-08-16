@@ -5,4 +5,4 @@ nixPkgs = ["curl", "python311"]
 cmds = ["pip install -r requirements.txt"]
 
 [start]
-cmd = "python tron.py"
+cmd = "python bot.py"
