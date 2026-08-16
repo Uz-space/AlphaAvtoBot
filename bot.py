@@ -282,6 +282,8 @@ async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("❌ Avval /start bilan sozlang.")
         return ConversationHandler.END
 
+    await update.message.reply_text("⏳ Yuklanmoqda...")
+
     # Dashboard ma'lumoti
     try:
         core = _build_bot_instance(context)
