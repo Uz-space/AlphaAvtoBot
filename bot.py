@@ -316,12 +316,15 @@ async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         parse_mode="Markdown",
         reply_markup=ReplyKeyboardMarkup(kb, one_time_keyboard=True, resize_keyboard=True),
     )
-    return S.MENU
+    context.user_data["waiting_menu"] = True
+    return ConversationHandler.END
 
 
-async def recv_menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def recv_menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not _allowed(update):
-        return ConversationHandler.END
+        return
+    if not context.user_data.get("waiting_menu"):
+        return  # Bu handler faqat /menu dan keyin ishlaydi
 
     txt = update.message.text.strip()
     if "1" in txt:
@@ -330,7 +333,7 @@ async def recv_menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         action = "hourly"
     else:
         await update.message.reply_text("1 yoki 2 tanlang:")
-        return S.MENU
+        return
 
     context.user_data["action"] = action
     await update.message.reply_text(
@@ -344,8 +347,8 @@ async def recv_menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         args=(update, context, action),
         daemon=True,
     )
+    context.user_data["waiting_menu"] = False
     thread.start()
-    return ConversationHandler.END
 
 
 def _run_action(update: Update, context: ContextTypes.DEFAULT_TYPE, action: str):
@@ -610,10 +613,10 @@ def main():
 
     app = Application.builder().token(BOT_TOKEN).build()
 
+    # Setup flow faqat: /start → cookie → ua → captcha type → api key
     conv = ConversationHandler(
         entry_points=[
             CommandHandler("start", cmd_start),
-            CommandHandler("menu",  cmd_menu),
         ],
         states={
             S.WAIT_COOKIE:       [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_cookie)],
@@ -621,25 +624,22 @@ def main():
             S.WAIT_CAPTCHA_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_captcha_type)],
             S.WAIT_API_KEY:      [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_api_key)],
             S.MENU:              [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_menu_choice)],
-            S.RUNNING: [
-                CommandHandler("menu",   cmd_menu),
-                CommandHandler("status", cmd_status),
-                CommandHandler("cancel", cmd_cancel),
-                CommandHandler("reset",  cmd_reset),
-            ],
         },
         fallbacks=[
             CommandHandler("cancel", cmd_cancel),
             CommandHandler("reset",  cmd_reset),
-            CommandHandler("menu",   cmd_menu),
-            CommandHandler("status", cmd_status),
         ],
         per_message=False,
+        allow_reentry=True,
     )
 
+    # /menu, /status, /reset — conversation dan tashqarida, har doim ishlaydi
     app.add_handler(conv)
+    app.add_handler(CommandHandler("menu",   cmd_menu))
     app.add_handler(CommandHandler("status", cmd_status))
     app.add_handler(CommandHandler("reset",  cmd_reset))
+    # Keyboard javobini ushlaydi (faqat waiting_menu=True bo'lsa)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, recv_menu_choice))
 
     log.info("Bot ishga tushdi. /start yuboring.")
     app.run_polling(drop_pending_updates=True)
