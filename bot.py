@@ -282,24 +282,24 @@ async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("❌ Avval /start bilan sozlang.")
         return ConversationHandler.END
 
-    await update.message.reply_text("⏳ Yuklanmoqda...")
+    loading_msg = await update.message.reply_text("⏳ Yuklanmoqda...")
 
     # Dashboard ma'lumoti
     try:
         core = _build_bot_instance(context)
         dash = core.Dashboard()
     except Exception as e:
-        await update.message.reply_text(f"❌ Dashboard xatosi: {e}")
+        await loading_msg.edit_text(f"❌ Dashboard xatosi: {e}")
         return ConversationHandler.END
 
     if dash.get("cloudflare"):
-        await update.message.reply_text("⚠️ Cloudflare aniqlandi. Cookie yangilang: /reset")
+        await loading_msg.edit_text("⚠️ Cloudflare aniqlandi. Cookie yangilang: /reset")
         return ConversationHandler.END
 
     if not dash.get("Login"):
         _del_cfg("cookie")
         _del_cfg("user_agent")
-        await update.message.reply_text("❌ Cookie muddati tugagan. /start bilan qaytadan kiring.")
+        await loading_msg.edit_text("❌ Cookie muddati tugagan. /start bilan qaytadan kiring.")
         return ConversationHandler.END
 
     cap_type = _get_cfg("type") or "1"
@@ -310,7 +310,7 @@ async def cmd_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         bal_api = "N/A"
 
     kb = [["1️⃣ Claim Bonus", "2️⃣ Hourly Faucet"]]
-    await update.message.reply_text(
+    await loading_msg.edit_text(
         f"👤 *{dash.get('Username','?')}*\n"
         f"💰 Balans: `{dash.get('Balance','?')}`\n"
         f"🔑 API balans: `{bal_api}`\n\n"
