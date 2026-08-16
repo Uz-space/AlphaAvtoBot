@@ -345,7 +345,7 @@ async def recv_menu_choice(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         daemon=True,
     )
     thread.start()
-    return S.RUNNING
+    return ConversationHandler.END
 
 
 def _run_action(update: Update, context: ContextTypes.DEFAULT_TYPE, action: str):
@@ -621,11 +621,18 @@ def main():
             S.WAIT_CAPTCHA_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_captcha_type)],
             S.WAIT_API_KEY:      [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_api_key)],
             S.MENU:              [MessageHandler(filters.TEXT & ~filters.COMMAND, recv_menu_choice)],
-            S.RUNNING:           [],  # Action ishlab turganida yangi buyruqlarni bloklaydi
+            S.RUNNING: [
+                CommandHandler("menu",   cmd_menu),
+                CommandHandler("status", cmd_status),
+                CommandHandler("cancel", cmd_cancel),
+                CommandHandler("reset",  cmd_reset),
+            ],
         },
         fallbacks=[
             CommandHandler("cancel", cmd_cancel),
             CommandHandler("reset",  cmd_reset),
+            CommandHandler("menu",   cmd_menu),
+            CommandHandler("status", cmd_status),
         ],
         per_message=False,
     )
