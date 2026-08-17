@@ -27,18 +27,18 @@ async def start_cmd(message: types.Message):
     await message.answer(
         "🎯 *Yuklanish Botiga Xush Kelibsiz!*\n\n"
         "▶️ /load - Yuklanishni boshlash\n"
-        "📊 1% dan 100% gacha progress",
+        "📊 1% dan 100% gacha (1,2,3,4,5...100)",
         parse_mode="Markdown"
     )
 
 @dp.message(Command("load"))
 async def load_animation(message: types.Message):
-    msg = await message.answer("⏳ Yuklanmoqda...")
+    msg = await message.answer("⏳ 0%")
     
-    # 1% dan 100% gacha progress
-    for percent in range(1, 101):
+    # 1% dan 100% gacha - har bir foizda yangilanadi
+    for percent in range(1, 101):  # 1,2,3,4,5...100
         bar = progress_bar(percent)
-        await asyncio.sleep(0.1)  # 0.1 sekund
+        await asyncio.sleep(0.05)  # 0.05 sekund
         await msg.edit_text(f"⏳ {bar} {percent}%")
     
     # Tugallandi
@@ -60,12 +60,12 @@ async def reload_callback(callback: types.CallbackQuery):
     await callback.message.delete()
     await callback.answer("🔄 Yangi yuklanish...")
     
-    msg = await callback.message.answer("⏳ Yuklanmoqda...")
+    msg = await callback.message.answer("⏳ 0%")
     
-    # 1% dan 100% gacha progress
-    for percent in range(1, 101):
+    # 1% dan 100% gacha - har bir foizda yangilanadi
+    for percent in range(1, 101):  # 1,2,3,4,5...100
         bar = progress_bar(percent)
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.05)
         await msg.edit_text(f"⏳ {bar} {percent}%")
     
     keyboard = InlineKeyboardMarkup(
@@ -86,7 +86,7 @@ async def help_cmd(message: types.Message):
     await message.answer(
         "📖 *Buyruqlar:*\n\n"
         "/start - Boshlash\n"
-        "/load - Yuklanish\n"
+        "/load - Yuklanish (1,2,3,4,5...100)\n"
         "/help - Yordam",
         parse_mode="Markdown"
     )
@@ -96,7 +96,7 @@ async def help_cmd(message: types.Message):
 async def main():
     print("=" * 40)
     print("🤖 BOT ISHGA TUSHDI!")
-    print("📊 1% dan 100% gacha progress")
+    print("📊 1% dan 100% gacha (1,2,3,4,5...100)")
     print("=" * 40)
     await dp.start_polling(bot)
 
