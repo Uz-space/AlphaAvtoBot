@@ -40,7 +40,7 @@ _spec.loader.exec_module(tron)
 # ============================================================
 #                      SOZLAMALAR
 # ============================================================
-BOT_TOKEN = "TELEGRAM_BOT_TOKEN_SHUNGA_QOY"   # @BotFather dan olgan token
+BOT_TOKEN = "8863932002:AAE7AaYQFBCycRzv-M1zfAIa-ye5HniJj2Q"   # @BotFather dan olgan token
 ALLOWED_USERS: set[int] = set()  # Bo'sh = hamma foydalanuvchiga ruxsat
 #  Faqat o'zingga ruxsat bermoqchi bo'lsang:  ALLOWED_USERS = {123456789}
 
