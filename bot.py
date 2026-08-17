@@ -1,5 +1,6 @@
 import asyncio
 import random
+import sys
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
@@ -12,7 +13,7 @@ dp = Dispatcher()
 
 # ========== 120+ TURLI ANIMATSIYALAR ==========
 LOADING_ANIMATIONS = [
-    # 1. Progress-barlar (turli xil)
+    # 1. Progress-barlar
     "⏳ ████████░░░░ 67%",
     "⏳ ██░░░░░░░░░░ 17%",
     "⏳ ██████████░░ 89%",
@@ -439,7 +440,6 @@ async def main():
     print(f"📊 {len(LOADING_ANIMATIONS)} TA ANIMATSIYA YUKLANDI")
     print("=" * 40)
     print("✅ Bot tayyor!")
-    print("👨‍💻 @SizningUsername - Bot yaratuvchi")
     print("=" * 40)
     
     await dp.start_polling(bot)
