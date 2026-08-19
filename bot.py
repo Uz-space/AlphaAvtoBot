@@ -34,7 +34,7 @@ async def send_rich_table(chat_id: int | str, username: str, rows: list[dict]) -
     for row in rows:
         table_lines.append(f"| {row['field']} | {row['details']} |")
 
-    markdown = f"âœ… **{username}**, ma'lumotlaringiz:\n\n" + "\n".join(table_lines)
+    markdown = f"✅ **{username}**, ma'lumotlaringiz:\n\n" + "\n".join(table_lines)
 
     payload = {
         "chat_id": chat_id,
@@ -69,7 +69,7 @@ async def send_fallback(chat_id: int | str, rows: list[dict], context: ContextTy
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "ðŸ‘‹ Salom! Menga ma'lumot yuboring:\n\n"
+        "👋 Salom! Menga ma'lumot yuboring:\n\n"
         "Misol:\n"
         "Ism: Sardor\n"
         "Yosh: 22\n"
@@ -84,12 +84,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_id = update.effective_chat.id
 
     if len(user_input) < 2:
-        await update.message.reply_text("âŒ Kamida biror narsa yozing.")
+        await update.message.reply_text("❌ Kamida biror narsa yozing.")
         return
 
     rows = parse_input_to_rows(user_input)
     if not rows:
-        await update.message.reply_text("âŒ Format: 'Kalit: Qiymat' ko'rinishida yozing.")
+        await update.message.reply_text("❌ Format: 'Kalit: Qiymat' ko'rinishida yozing.")
         return
 
     # Chatga yuborish
