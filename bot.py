@@ -1,132 +1,67 @@
 import asyncio
-import logging
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import Command
+from aiogram.filters import CommandStart
+# Telegram'ning eng so'nggi Rich message va Table ob'ektlarini chaqiramiz
+from aiogram.types import RichMessage, RichBlockTable, RichBlockTableRow, RichBlockTableCell
 
-# ========== LOGING ==========
-logging.basicConfig(level=logging.INFO)
+# Bot tokeningizni kiriting (@BotFather bergan token)
+API_TOKEN = '8245157509:AAH-cL3k2upery-lPPkhIgGvNKVMwGAXXcc'
 
-# ========== BOT TOKEN ==========
-TOKEN = "8863932002:AAE7AaYQFBCycRzv-M1zfAIa-ye5HniJj2Q"
-
-bot = Bot(token=TOKEN)
+bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# ========== PROGRESS-BAR FUNKSIYASI ==========
-def progress_bar(percent, length=20):
-    filled = int(length * percent / 100)
-    bar = "█" * filled + "░" * (length - filled)
-    return bar
+@dp.message(CommandStart())
+async def cmd_start(message: types.Message):
+    # 1. Skrinshotdagi kabi jadval kataklarini (cells) va qatorlarini tuzamiz
+    table_rows = [
+        # Sarlavha qatori
+        RichBlockTableRow(cells=[
+            RichBlockTableCell(text="Field", align="left", is_header=True),
+            RichBlockTableCell(text="Details", align="left", is_header=True)
+        ]),
+        # Foydalanuvchi ma'lumoti
+        RichBlockTableRow(cells=[
+            RichBlockTableCell(text="User Id"),
+            RichBlockTableCell(text="Sarah(25•••••019)")
+        ]),
+        # Summa qatori
+        RichBlockTableRow(cells=[
+            RichBlockTableCell(text="Amount"),
+            RichBlockTableCell(text="0.001946 BTC ~\n$135.70")
+        ]),
+        # Hamyon manzili
+        RichBlockTableRow(cells=[
+            RichBlockTableCell(text="Receiver"),
+            RichBlockTableCell(text="bc1qn0cnsnw3m8s4snwn821w1785ams3m10qutg66p")
+        ]),
+        # Transaksiya Hash ID raqami
+        RichBlockTableRow(cells=[
+            RichBlockTableCell(text="Hash ID"),
+            RichBlockTableCell(text="f09c2bbd2cb...4643db0f77")
+        ])
+    ]
 
-# ========== BOT KOMANDALARI ==========
-
-@dp.message(Command("start"))
-async def start_cmd(message: types.Message):
-    await message.answer(
-        "🎯 *Yuklanish Botiga Xush Kelibsiz!*\n\n"
-        "▶️ /load - Yuklanishni boshlash\n"
-        "📊 1% → 2% → 3% → ... → 100%\n"
-        "⏱️ Har bir foiz 0.3 sekund",
-        parse_mode="Markdown"
+    # 2. RichBlockTable ob'ektini barcha konfiguratsiyalar bilan yig'amiz
+    native_table = RichBlockTable(
+        rows=table_rows,
+        is_bordered=True,       # Kataklar atrofida ingichka tekis chiziqlar chiqarish
+        is_striped=True,        # Qatorlarni och va to'q rang qilib navbatlashtirish
+        caption="New Withdraw Success" # Jadval tepasidagi sarlavha matni
     )
 
-@dp.message(Command("load"))
-async def load_animation(message: types.Message):
-    msg = await message.answer("⏳ 0%")
-    
-    # 1% dan 100% gacha - HAR BIR FOIZDA yangilanadi
-    for percent in range(1, 101):  # 1,2,3,4,5...100
-        bar = progress_bar(percent)
-        await asyncio.sleep(0.3)  # 0.3 sekund - sekin va aniq
-        await msg.edit_text(f"⏳ {bar} {percent}%")
-    
-    # Tugallandi
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Qayta yuklash", callback_data="reload")]
-        ]
-    )
-    
-    await msg.edit_text(
-        "✅ *Yuklash tugallandi!*\n"
-        "🎉 100% tayyor!",
-        parse_mode="Markdown",
-        reply_markup=keyboard
+    # 3. Tayyor jadval blokini RichMessage tarkibiga joylaymiz
+    rich_payload = RichMessage(
+        blocks=[native_table]
     )
 
-@dp.callback_query(lambda c: c.data == "reload")
-async def reload_callback(callback: types.CallbackQuery):
-    await callback.message.delete()
-    await callback.answer("🔄 Yangi yuklanish...")
-    
-    msg = await callback.message.answer("⏳ 0%")
-    
-    # 1% dan 100% gacha - HAR BIR FOIZDA yangilanadi
-    for percent in range(1, 101):  # 1,2,3,4,5...100
-        bar = progress_bar(percent)
-        await asyncio.sleep(0.3)  # 0.3 sekund - sekin va aniq
-        await msg.edit_text(f"⏳ {bar} {percent}%")
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Yana bir marta", callback_data="reload")]
-        ]
+    # 4. Oddiy sendMessage o'rniga yangi sendRichMessage metodi orqali yuboramiz
+    await bot.send_rich_message(
+        chat_id=message.chat.id,
+        rich_message=rich_payload
     )
-    
-    await msg.edit_text(
-        "✅ *Yuklash tugallandi!*\n"
-        "🌟 100% muvaffaqiyatli!",
-        parse_mode="Markdown",
-        reply_markup=keyboard
-    )
-
-@dp.message(Command("fast"))
-async def fast_load(message: types.Message):
-    """Tez yuklanish - 0.05 sekund"""
-    msg = await message.answer("⚡ 0%")
-    
-    for percent in range(1, 101):
-        bar = progress_bar(percent)
-        await asyncio.sleep(0.05)
-        await msg.edit_text(f"⚡ {bar} {percent}%")
-    
-    await msg.edit_text("✅ *Tez yuklash tugallandi!*", parse_mode="Markdown")
-
-@dp.message(Command("slow"))
-async def slow_load(message: types.Message):
-    """Sekin yuklanish - 0.5 sekund"""
-    msg = await message.answer("🐢 0%")
-    
-    for percent in range(1, 101):
-        bar = progress_bar(percent)
-        await asyncio.sleep(0.5)
-        await msg.edit_text(f"🐢 {bar} {percent}%")
-    
-    await msg.edit_text("✅ *Sekin yuklash tugallandi!*", parse_mode="Markdown")
-
-@dp.message(Command("help"))
-async def help_cmd(message: types.Message):
-    await message.answer(
-        "📖 *Buyruqlar:*\n\n"
-        "/start - Boshlash\n"
-        "/load - Oddiy yuklanish (0.3 sekund)\n"
-        "/fast - Tez yuklanish (0.05 sekund)\n"
-        "/slow - Sekin yuklanish (0.5 sekund)\n"
-        "/help - Yordam\n\n"
-        "📊 1% → 2% → 3% → ... → 100%",
-        parse_mode="Markdown"
-    )
-
-# ========== BOT ISHGA TUSHIRISH ==========
 
 async def main():
-    print("=" * 50)
-    print("🤖 BOT ISHGA TUSHDI!")
-    print("📊 1% → 2% → 3% → ... → 100%")
-    print("⏱️ Har bir foiz 0.3 sekund")
-    print("=" * 50)
     await dp.start_polling(bot)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(main())
