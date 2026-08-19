@@ -2,12 +2,11 @@
 import logging
 import os
 import httpx
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
-    CallbackQueryHandler,
     ContextTypes,
     filters,
 )
@@ -18,35 +17,58 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 
-def build_rich_table(rows: list[dict]) -> dict:
+def parse_input_to_rows(text: str) -> list[dict]:
+    rows = []
+    for line in text.strip().split("\n"):
+        if ":" in line:
+            key, _, value = line.partition(":")
+            rows.append({"field": key.strip(), "details": value.strip()})
+        elif line.strip():
+            rows.append({"field": "Qiymat", "details": line.strip()})
+    return rows
+
+
+async def send_rich_message(chat_id: int, text: str, rows: list[dict]) -> bool:
     header_cells = [
-        {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": "Field"}}], "is_header": True}},
-        {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": "Details"}}], "is_header": True}},
+        {
+            "type": "richBlockTableCell",
+            "content": [{"type": "richTextPlain", "text": "Field"}],
+            "is_header": True
+        },
+        {
+            "type": "richBlockTableCell",
+            "content": [{"type": "richTextPlain", "text": "Details"}],
+            "is_header": True
+        },
     ]
 
     data_rows = []
     for row in rows:
         data_rows.append([
-            {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": row["field"]}}]}},
-            {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": row["details"]}}]}},
+            {
+                "type": "richBlockTableCell",
+                "content": [{"type": "richTextPlain", "text": row["field"]}]
+            },
+            {
+                "type": "richBlockTableCell",
+                "content": [{"type": "richTextPlain", "text": row["details"]}]
+            },
         ])
 
-    return {
-        "RichBlockTable": {
-            "rows": [header_cells] + data_rows,
-            "is_bordered": True,
-            "is_striped": True,
-        }
-    }
-
-
-async def send_rich_message(chat_id: int, text: str, table: dict) -> bool:
     payload = {
         "chat_id": chat_id,
         "rich_message": {
             "blocks": [
-                {"RichBlockText": {"text": text}},
-                table,
+                {
+                    "type": "richBlockParagraph",
+                    "content": [{"type": "richTextPlain", "text": text}]
+                },
+                {
+                    "type": "richBlockTable",
+                    "rows": [header_cells] + data_rows,
+                    "is_bordered": True,
+                    "is_striped": True,
+                }
             ]
         }
     }
@@ -64,15 +86,16 @@ async def send_rich_message(chat_id: int, text: str, table: dict) -> bool:
         return True
 
 
-def parse_input_to_rows(text: str) -> list[dict]:
-    rows = []
-    for line in text.strip().split("\n"):
-        if ":" in line:
-            key, _, value = line.partition(":")
-            rows.append({"field": key.strip(), "details": value.strip()})
-        elif line.strip():
-            rows.append({"field": "Qiymat", "details": line.strip()})
-    return rows
+async def send_fallback(chat_id: int, rows: list[dict], context: ContextTypes.DEFAULT_TYPE) -> None:
+    lines = [f"{'Field':<15} | {'Details'}", "-" * 35]
+    for row in rows:
+        lines.append(f"{row['field']:<15} | {row['details']}")
+    fallback = "```\n" + "\n".join(lines) + "\n```"
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=fallback,
+        parse_mode="Markdown"
+    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -101,17 +124,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("❌ Formatni tekshiring: 'Kalit: Qiymat' ko'rinishida yozing.")
         return
 
-    table = build_rich_table(rows)
     header_text = f"✅ {username}, ma'lumotlaringiz:"
-
-    success = await send_rich_message(chat_id, header_text, table)
+    success = await send_rich_message(chat_id, header_text, rows)
 
     if not success:
-        lines = [f"{'Field':<15} | {'Details'}", "-" * 35]
-        for row in rows:
-            lines.append(f"{row['field']:<15} | {row['details']}")
-        fallback = "```\n" + "\n".join(lines) + "\n```"
-        await update.message.reply_text(fallback, parse_mode="Markdown")
+        await send_fallback(chat_id, rows, context)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
