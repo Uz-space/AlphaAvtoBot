@@ -1,67 +1,143 @@
-import asyncio
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart
-# Telegram'ning eng so'nggi Rich message va Table ob'ektlarini chaqiramiz
-from aiogram.types import RichMessage, RichBlockTable, RichBlockTableRow, RichBlockTableCell
+# --- bot.py ---
+import logging
+import httpx
+from telegram import Update
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
-# Bot tokeningizni kiriting (@BotFather bergan token)
-API_TOKEN = '8245157509:AAH-cL3k2upery-lPPkhIgGvNKVMwGAXXcc'
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+BOT_TOKEN = "8245157509:AAH-cL3k2upery-lPPkhIgGvNKVMwGAXXcc"
 
-@dp.message(CommandStart())
-async def cmd_start(message: types.Message):
-    # 1. Skrinshotdagi kabi jadval kataklarini (cells) va qatorlarini tuzamiz
-    table_rows = [
-        # Sarlavha qatori
-        RichBlockTableRow(cells=[
-            RichBlockTableCell(text="Field", align="left", is_header=True),
-            RichBlockTableCell(text="Details", align="left", is_header=True)
-        ]),
-        # Foydalanuvchi ma'lumoti
-        RichBlockTableRow(cells=[
-            RichBlockTableCell(text="User Id"),
-            RichBlockTableCell(text="Sarah(25•••••019)")
-        ]),
-        # Summa qatori
-        RichBlockTableRow(cells=[
-            RichBlockTableCell(text="Amount"),
-            RichBlockTableCell(text="0.001946 BTC ~\n$135.70")
-        ]),
-        # Hamyon manzili
-        RichBlockTableRow(cells=[
-            RichBlockTableCell(text="Receiver"),
-            RichBlockTableCell(text="bc1qn0cnsnw3m8s4snwn821w1785ams3m10qutg66p")
-        ]),
-        # Transaksiya Hash ID raqami
-        RichBlockTableRow(cells=[
-            RichBlockTableCell(text="Hash ID"),
-            RichBlockTableCell(text="f09c2bbd2cb...4643db0f77")
-        ])
+
+def build_rich_table(rows: list[dict]) -> dict:
+    """
+    Markdown pipe table'ni RichBlockTable formatiga o'tkazadi.
+    rows = [{"field": "User Id", "details": "Sarah(25...019)"}, ...]
+    """
+    header_cells = [
+        {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": "Field"}}], "is_header": True}},
+        {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": "Details"}}], "is_header": True}},
     ]
 
-    # 2. RichBlockTable ob'ektini barcha konfiguratsiyalar bilan yig'amiz
-    native_table = RichBlockTable(
-        rows=table_rows,
-        is_bordered=True,       # Kataklar atrofida ingichka tekis chiziqlar chiqarish
-        is_striped=True,        # Qatorlarni och va to'q rang qilib navbatlashtirish
-        caption="New Withdraw Success" # Jadval tepasidagi sarlavha matni
+    data_rows = []
+    for row in rows:
+        data_rows.append([
+            {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": row["field"]}}]}},
+            {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": row["details"]}}]}},
+        ])
+
+    return {
+        "RichBlockTable": {
+            "rows": [header_cells] + data_rows,
+            "is_bordered": True,
+            "is_striped": True,
+        }
+    }
+
+
+async def send_rich_message(chat_id: int, text: str, table: dict) -> bool:
+    """
+    sendRichMessage API call — Bot API 10.1+
+    python-telegram-bot hali wrap qilmagan, to'g'ridan-to'g'ri HTTP ishlatamiz.
+    """
+    payload = {
+        "chat_id": chat_id,
+        "rich_message": {
+            "blocks": [
+                {"RichBlockText": {"text": text}},
+                table,
+            ]
+        }
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendRichMessage",
+            json=payload,
+            timeout=10.0,
+        )
+        data = response.json()
+        if not data.get("ok"):
+            logger.error(f"sendRichMessage xatosi: {data}")
+            return False
+        return True
+
+
+def parse_input_to_rows(text: str) -> list[dict]:
+    """
+    Foydalanuvchi kiritgan matnni table row'larga o'tkazadi.
+    Format: "Ism: Sardor\nYosh: 22"
+    """
+    rows = []
+    for line in text.strip().split("\n"):
+        if ":" in line:
+            key, _, value = line.partition(":")
+            rows.append({"field": key.strip(), "details": value.strip()})
+        elif line.strip():
+            rows.append({"field": "Qiymat", "details": line.strip()})
+    return rows
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "👋 Salom! Menga ma'lumot yuboring:\n\n"
+        "Misol:\n"
+        "Ism: Sardor\n"
+        "Yosh: 22\n"
+        "Shahar: Toshkent\n\n"
+        "Men native table sifatida ko'rsataman."
     )
 
-    # 3. Tayyor jadval blokini RichMessage tarkibiga joylaymiz
-    rich_payload = RichMessage(
-        blocks=[native_table]
-    )
 
-    # 4. Oddiy sendMessage o'rniga yangi sendRichMessage metodi orqali yuboramiz
-    await bot.send_rich_message(
-        chat_id=message.chat.id,
-        rich_message=rich_payload
-    )
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    username = user.first_name or "Foydalanuvchi"
+    user_input = update.message.text.strip()
+    chat_id = update.effective_chat.id
 
-async def main():
-    await dp.start_polling(bot)
+    if len(user_input) < 2:
+        await update.message.reply_text("❌ Kamida biror narsa yozing.")
+        return
 
-if __name__ == '__main__':
-    asyncio.run(main())
+    rows = parse_input_to_rows(user_input)
+    if not rows:
+        await update.message.reply_text("❌ Formatni tekshiring: 'Kalit: Qiymat' ko'rinishida yozing.")
+        return
+
+    table = build_rich_table(rows)
+    header_text = f"✅ {username}, ma'lumotlaringiz:"
+
+    success = await send_rich_message(chat_id, header_text, table)
+
+    if not success:
+        # Fallback: eski monospace usul
+        lines = [f"{'Field':<15} | {'Details'}", "-" * 35]
+        for row in rows:
+            lines.append(f"{row['field']:<15} | {row['details']}")
+        fallback = "```\n" + "\n".join(lines) + "\n```"
+        await update.message.reply_text(fallback, parse_mode="Markdown")
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error(f"Xato: {context.error}")
+
+
+def main() -> None:
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_error_handler(error_handler)
+
+    logger.info("Bot ishga tushdi...")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+if __name__ == "__main__":
+    main()
