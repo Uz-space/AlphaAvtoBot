@@ -1,11 +1,13 @@
 # --- bot.py ---
 import logging
+import os
 import httpx
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     ContextTypes,
     filters,
 )
@@ -13,14 +15,10 @@ from telegram.ext import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "8245157509:AAH-cL3k2upery-lPPkhIgGvNKVMwGAXXcc"
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 
 def build_rich_table(rows: list[dict]) -> dict:
-    """
-    Markdown pipe table'ni RichBlockTable formatiga o'tkazadi.
-    rows = [{"field": "User Id", "details": "Sarah(25...019)"}, ...]
-    """
     header_cells = [
         {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": "Field"}}], "is_header": True}},
         {"RichBlockTableCell": {"content": [{"RichBlockText": {"text": "Details"}}], "is_header": True}},
@@ -43,10 +41,6 @@ def build_rich_table(rows: list[dict]) -> dict:
 
 
 async def send_rich_message(chat_id: int, text: str, table: dict) -> bool:
-    """
-    sendRichMessage API call — Bot API 10.1+
-    python-telegram-bot hali wrap qilmagan, to'g'ridan-to'g'ri HTTP ishlatamiz.
-    """
     payload = {
         "chat_id": chat_id,
         "rich_message": {
@@ -71,10 +65,6 @@ async def send_rich_message(chat_id: int, text: str, table: dict) -> bool:
 
 
 def parse_input_to_rows(text: str) -> list[dict]:
-    """
-    Foydalanuvchi kiritgan matnni table row'larga o'tkazadi.
-    Format: "Ism: Sardor\nYosh: 22"
-    """
     rows = []
     for line in text.strip().split("\n"):
         if ":" in line:
@@ -117,7 +107,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     success = await send_rich_message(chat_id, header_text, table)
 
     if not success:
-        # Fallback: eski monospace usul
         lines = [f"{'Field':<15} | {'Details'}", "-" * 35]
         for row in rows:
             lines.append(f"{row['field']:<15} | {row['details']}")
@@ -130,6 +119,9 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 def main() -> None:
+    if not BOT_TOKEN:
+        raise ValueError("BOT_TOKEN environment variable topilmadi.")
+
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
