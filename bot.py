@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHANNEL_ID = os.environ.get("CHANNEL_ID")  # masalan: @mychannelname yoki -1001234567890
+CHANNEL_ID = os.environ.get("CHANNEL_ID")
 
 
 def parse_input_to_rows(text: str) -> list[dict]:
@@ -29,46 +29,42 @@ def parse_input_to_rows(text: str) -> list[dict]:
     return rows
 
 
-def build_html_table(rows: list[dict], username: str) -> str:
-    header = "🏅 <b>New Withdraw Success</b>\n\n"
-
-    # Blockquote ichida congratulations
-    quote = f"<blockquote>🎁 <i>Congratulations <b>{username}</b>, ma'lumotlaringiz muvaffaqiyatli qayta ishlandi.</i></blockquote>\n\n"
-
-    # Table header
-    field_w = 12
-    detail_w = 20
-    separator = "─" * (field_w + detail_w + 3)
-
-    table = f"<code>"
-    table += f"{'Field':<{field_w}}  {'Details':<{detail_w}}\n"
-    table += f"{separator}\n"
+async def send_rich_table(chat_id: int | str, username: str, rows: list[dict]) -> bool:
+    table_lines = ["| Field | Details |", "|-------|---------|"]
     for row in rows:
-        field = row['field'][:field_w]
-        details = row['details'][:detail_w]
-        table += f"{field:<{field_w}}  {details:<{detail_w}}\n"
-    table += f"</code>"
+        table_lines.append(f"| {row['field']} | {row['details']} |")
 
-    return header + quote + table
+    markdown = f"✅ **{username}**, ma'lumotlaringiz:\n\n" + "\n".join(table_lines)
 
-
-async def send_message_html(chat_id: str | int, html: str) -> bool:
     payload = {
         "chat_id": chat_id,
-        "text": html,
-        "parse_mode": "HTML",
+        "rich_message": {
+            "markdown": markdown
+        }
     }
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendRichMessage",
             json=payload,
             timeout=10.0,
         )
         data = response.json()
         if not data.get("ok"):
-            logger.error(f"sendMessage xatosi ({chat_id}): {data}")
+            logger.error(f"sendRichMessage xatosi ({chat_id}): {data}")
             return False
         return True
+
+
+async def send_fallback(chat_id: int | str, rows: list[dict], context: ContextTypes.DEFAULT_TYPE) -> None:
+    lines = [f"{'Field':<15} | {'Details'}", "-" * 35]
+    for row in rows:
+        lines.append(f"{row['field']:<15} | {row['details']}")
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="```\n" + "\n".join(lines) + "\n```",
+        parse_mode="Markdown"
+    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -77,8 +73,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Misol:\n"
         "Ism: Sardor\n"
         "Yosh: 22\n"
-        "Shahar: Toshkent\n\n"
-        "Men tableni chatga va kanalga yuboraman."
+        "Shahar: Toshkent"
     )
 
 
@@ -94,17 +89,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     rows = parse_input_to_rows(user_input)
     if not rows:
-        await update.message.reply_text("❌ Formatni tekshiring: 'Kalit: Qiymat' ko'rinishida yozing.")
+        await update.message.reply_text("❌ Format: 'Kalit: Qiymat' ko'rinishida yozing.")
         return
 
-    html = build_html_table(rows, username)
-
     # Chatga yuborish
-    await send_message_html(chat_id, html)
+    success = await send_rich_table(chat_id, username, rows)
+    if not success:
+        await send_fallback(chat_id, rows, context)
 
     # Kanalga yuborish
     if CHANNEL_ID:
-        await send_message_html(CHANNEL_ID, html)
+        await send_rich_table(CHANNEL_ID, username, rows)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -113,7 +108,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
 
 def main() -> None:
     if not BOT_TOKEN:
-        raise ValueError("BOT_TOKEN environment variable topilmadi.")
+        raise ValueError("BOT_TOKEN topilmadi.")
 
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
