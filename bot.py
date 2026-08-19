@@ -15,6 +15,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHANNEL_ID = os.environ.get("CHANNEL_ID")  # masalan: @mychannelname yoki -1001234567890
 
 
 def parse_input_to_rows(text: str) -> list[dict]:
@@ -28,74 +29,46 @@ def parse_input_to_rows(text: str) -> list[dict]:
     return rows
 
 
-async def send_rich_message(chat_id: int, text: str, rows: list[dict]) -> bool:
-    header_cells = [
-        {
-            "type": "richBlockTableCell",
-            "content": [{"type": "richTextPlain", "text": "Field"}],
-            "is_header": True
-        },
-        {
-            "type": "richBlockTableCell",
-            "content": [{"type": "richTextPlain", "text": "Details"}],
-            "is_header": True
-        },
-    ]
+def build_html_table(rows: list[dict], username: str) -> str:
+    header = "🏅 <b>New Withdraw Success</b>\n\n"
 
-    data_rows = []
+    # Blockquote ichida congratulations
+    quote = f"<blockquote>🎁 <i>Congratulations <b>{username}</b>, ma'lumotlaringiz muvaffaqiyatli qayta ishlandi.</i></blockquote>\n\n"
+
+    # Table header
+    field_w = 12
+    detail_w = 20
+    separator = "─" * (field_w + detail_w + 3)
+
+    table = f"<code>"
+    table += f"{'Field':<{field_w}}  {'Details':<{detail_w}}\n"
+    table += f"{separator}\n"
     for row in rows:
-        data_rows.append([
-            {
-                "type": "richBlockTableCell",
-                "content": [{"type": "richTextPlain", "text": row["field"]}]
-            },
-            {
-                "type": "richBlockTableCell",
-                "content": [{"type": "richTextPlain", "text": row["details"]}]
-            },
-        ])
+        field = row['field'][:field_w]
+        details = row['details'][:detail_w]
+        table += f"{field:<{field_w}}  {details:<{detail_w}}\n"
+    table += f"</code>"
 
+    return header + quote + table
+
+
+async def send_message_html(chat_id: str | int, html: str) -> bool:
     payload = {
         "chat_id": chat_id,
-        "rich_message": {
-            "blocks": [
-                {
-                    "type": "richBlockParagraph",
-                    "content": [{"type": "richTextPlain", "text": text}]
-                },
-                {
-                    "type": "richBlockTable",
-                    "rows": [header_cells] + data_rows,
-                    "is_bordered": True,
-                    "is_striped": True,
-                }
-            ]
-        }
+        "text": html,
+        "parse_mode": "HTML",
     }
-
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendRichMessage",
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
             json=payload,
             timeout=10.0,
         )
         data = response.json()
         if not data.get("ok"):
-            logger.error(f"sendRichMessage xatosi: {data}")
+            logger.error(f"sendMessage xatosi ({chat_id}): {data}")
             return False
         return True
-
-
-async def send_fallback(chat_id: int, rows: list[dict], context: ContextTypes.DEFAULT_TYPE) -> None:
-    lines = [f"{'Field':<15} | {'Details'}", "-" * 35]
-    for row in rows:
-        lines.append(f"{row['field']:<15} | {row['details']}")
-    fallback = "```\n" + "\n".join(lines) + "\n```"
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=fallback,
-        parse_mode="Markdown"
-    )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -105,7 +78,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "Ism: Sardor\n"
         "Yosh: 22\n"
         "Shahar: Toshkent\n\n"
-        "Men native table sifatida ko'rsataman."
+        "Men tableni chatga va kanalga yuboraman."
     )
 
 
@@ -124,11 +97,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("❌ Formatni tekshiring: 'Kalit: Qiymat' ko'rinishida yozing.")
         return
 
-    header_text = f"✅ {username}, ma'lumotlaringiz:"
-    success = await send_rich_message(chat_id, header_text, rows)
+    html = build_html_table(rows, username)
 
-    if not success:
-        await send_fallback(chat_id, rows, context)
+    # Chatga yuborish
+    await send_message_html(chat_id, html)
+
+    # Kanalga yuborish
+    if CHANNEL_ID:
+        await send_message_html(CHANNEL_ID, html)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
