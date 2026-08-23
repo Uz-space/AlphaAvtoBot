@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
-"""
-Telegram Emoji Pack Downloader Bot
-Foydalanuvchi t.me/addemoji/PackName yoki t.me/addstickers/PackName linkini yuborsa,
-emoji/sticker packni tartib bilan yuklab ZIP qilib qaytaradi.
-"""
-
 import os
 import io
 import zipfile
-import asyncio
 import logging
 import re
-from pathlib import Path
+import unicodedata
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     ContextTypes,
     filters,
 )
-import aiohttp
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -31,12 +24,8 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8996187608:AAFaCrrqwqoF6HKRnwJ336hNGyn2Nwa7O_Q")
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
-def parse_pack_name(text: str) -> str | None:
-    """Extract sticker/emoji set short name from various link formats."""
+def parse_pack_name(text: str):
     text = text.strip()
     patterns = [
         r"t\.me/addemoji/([A-Za-z0-9_]+)",
@@ -48,46 +37,49 @@ def parse_pack_name(text: str) -> str | None:
         m = re.search(pat, text)
         if m:
             return m.group(1)
-    # Maybe user sent just the short name directly
     if re.fullmatch(r"[A-Za-z0-9_]+", text):
         return text
     return None
 
 
-async def fetch_sticker_set(bot, set_name: str):
-    """Return a StickerSet object or raise."""
-    return await bot.get_sticker_set(set_name)
+def emoji_to_name(emoji_char: str) -> str:
+    if not emoji_char:
+        return "emoji"
+    try:
+        name = unicodedata.name(emoji_char[0], "").lower()
+        name = re.sub(r"[^a-z0-9]+", "_", name).strip("_")
+        return name[:30] if name else "emoji"
+    except Exception:
+        return "_".join(f"u{ord(c):04x}" for c in emoji_char[:2])
 
-
-async def download_sticker_bytes(session: aiohttp.ClientSession, file_url: str) -> bytes:
-    async with session.get(file_url) as resp:
-        resp.raise_for_status()
-        return await resp.read()
-
-
-# ---------------------------------------------------------------------------
-# Handlers
-# ---------------------------------------------------------------------------
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[InlineKeyboardButton("📖 Qo'llanma", callback_data="help")]]
     await update.message.reply_text(
-        "👋 Salom! Men Telegram emoji/sticker pack yuklovchi botman.\n\n"
-        "Menga emoji yoki sticker pack linkini yuboring:\n"
-        "• https://t.me/addemoji/PackNomi\n"
-        "• https://t.me/addstickers/PackNomi\n\n"
-        "Men packni to'g'ri tartibda ZIP qilib yuboraman! 🎉"
+        "👋 Salom!\n\n"
+        "Men Telegram emoji yoki sticker pack yuklovchi botman.\n\n"
+        "📌 Ishlatish:\n"
+        "Pack linkini shu formatda yuboring:\n"
+        "<code>https://t.me/addemoji/PackNomi</code>\n"
+        "<code>https://t.me/addstickers/PackNomi</code>\n\n"
+        "Bot packni to'liq tartibda yuklab, ZIP qilib yuboradi ✅",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
 
-async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📖 Foydalanish:\n\n"
-        "1️⃣  Emoji pack linkini yuboring:\n"
-        "    https://t.me/addemoji/QuotexFlags\n\n"
-        "2️⃣  Sticker pack linkini yuboring:\n"
-        "    https://t.me/addstickers/SomeStickers\n\n"
-        "3️⃣  Bot packni yuklab, ZIP arxiv qilib yuboradi.\n\n"
-        "⚠️  Faqat ommaviy (public) packlar ishlaydi."
+async def help_button(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await query.message.reply_text(
+        "📖 <b>Qo'llanma</b>\n\n"
+        "1. Emoji pack linkini yuboring:\n"
+        "   <code>https://t.me/addemoji/QuotexFlags</code>\n\n"
+        "2. Sticker pack linkini yuboring:\n"
+        "   <code>https://t.me/addstickers/NomiBu</code>\n\n"
+        "3. Bot avtomatik yuklab ZIP yuboradi.\n\n"
+        "⚠️ Faqat ochiq (public) packlar ishlaydi.",
+        parse_mode="HTML",
     )
 
 
@@ -97,124 +89,123 @@ async def handle_link(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if not pack_name:
         await update.message.reply_text(
-            "❌ Noto'g'ri format. Iltimos, t.me/addemoji/PackNomi yoki "
-            "t.me/addstickers/PackNomi ko'rinishidagi link yuboring."
+            "❌ Link noto'g'ri.\n\n"
+            "To'g'ri format:\n"
+            "<code>https://t.me/addemoji/PackNomi</code>",
+            parse_mode="HTML",
         )
         return
 
     status_msg = await update.message.reply_text(
-        f"🔍 <b>{pack_name}</b> pack yuklanmoqda...",
+        f"🔍 <b>{pack_name}</b> qidirilmoqda...",
         parse_mode="HTML",
     )
 
+    # Pack ma'lumotlarini olish
     try:
-        sticker_set = await fetch_sticker_set(ctx.bot, pack_name)
+        sticker_set = await ctx.bot.get_sticker_set(pack_name)
     except Exception as e:
-        logger.error("get_sticker_set error: %s", e)
+        logger.error("get_sticker_set: %s", e)
         await status_msg.edit_text(
-            f"❌ Pack topilmadi: <code>{pack_name}</code>\n\n"
-            "Pack mavjud yoki ommaviy emasmi? Linkni tekshiring.",
+            f"❌ <b>{pack_name}</b> topilmadi.\n\n"
+            "Pack mavjud emas yoki yopiq bo'lishi mumkin.",
             parse_mode="HTML",
         )
         return
 
     stickers = sticker_set.stickers
     total = len(stickers)
-    set_title = sticker_set.title
+    title = sticker_set.title
 
-    await status_msg.edit_text(
-        f"📦 <b>{set_title}</b>\n"
-        f"Jami: {total} ta emoji/sticker\n"
-        f"⏳ Yuklanmoqda...",
-        parse_mode="HTML",
-    )
-
-    # Figure out extension
-    is_video = stickers[0].is_video if stickers else False
-    is_animated = stickers[0].is_animated if stickers else False
-
-    if is_video:
+    # Fayl formatini aniqlash
+    s0 = stickers[0] if stickers else None
+    if s0 and s0.is_video:
         ext = ".webm"
-    elif is_animated:
+    elif s0 and s0.is_animated:
         ext = ".tgs"
     else:
         ext = ".webp"
 
+    await status_msg.edit_text(
+        f"📦 <b>{title}</b>\n"
+        f"Jami: {total} ta fayl\n"
+        f"⏳ Yuklanmoqda...",
+        parse_mode="HTML",
+    )
+
+    digits = len(str(total))
     zip_buffer = io.BytesIO()
-    digits = len(str(total))  # padding width
+    failed = 0
 
-    async with aiohttp.ClientSession() as session:
-        with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-            for idx, sticker in enumerate(stickers, start=1):
+    with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_STORED) as zf:
+        for idx, sticker in enumerate(stickers, start=1):
+            try:
+                # python-telegram-bot o'zi yuklab beradi — URL kerak emas
+                tg_file = await ctx.bot.get_file(sticker.file_id)
+                file_bytes = await tg_file.download_as_bytearray()
+
+                emoji_name = emoji_to_name(sticker.emoji or "")
+                filename = f"{str(idx).zfill(digits)}_{emoji_name}{ext}"
+                zf.writestr(filename, bytes(file_bytes))
+
+            except Exception as e:
+                logger.warning("Sticker %d xato: %s", idx, e)
+                failed += 1
+
+            # Har 15 tada progress yangilash
+            if idx % 15 == 0 or idx == total:
                 try:
-                    tg_file = await ctx.bot.get_file(sticker.file_id)
-                    file_bytes = await download_sticker_bytes(session, tg_file.file_path)
-
-                    # Emoji hint for filename (sanitised)
-                    emoji_char = (sticker.emoji or "").encode("ascii", "ignore").decode() or "emoji"
-                    safe_emoji = re.sub(r'[\\/*?:"<>|]', "", emoji_char) or f"item{idx}"
-
-                    filename = f"{str(idx).zfill(digits)}_{safe_emoji}{ext}"
-                    zf.writestr(filename, file_bytes)
-
-                    # Progress update every 20 items
-                    if idx % 20 == 0 or idx == total:
-                        await status_msg.edit_text(
-                            f"📦 <b>{set_title}</b>\n"
-                            f"⏳ {idx}/{total} yuklandi...",
-                            parse_mode="HTML",
-                        )
-
-                except Exception as e:
-                    logger.warning("Sticker %d download failed: %s", idx, e)
+                    await status_msg.edit_text(
+                        f"📦 <b>{title}</b>\n"
+                        f"⏳ {idx}/{total} yuklandi...",
+                        parse_mode="HTML",
+                    )
+                except Exception:
+                    pass
 
     zip_buffer.seek(0)
-    zip_size_mb = zip_buffer.getbuffer().nbytes / 1_048_576
+    size_mb = zip_buffer.getbuffer().nbytes / 1_048_576
 
-    if zip_size_mb > 50:
+    if size_mb > 50:
         await status_msg.edit_text(
-            f"❌ ZIP fayl juda katta ({zip_size_mb:.1f} MB). "
+            f"❌ Fayl juda katta ({size_mb:.1f} MB).\n"
             "Telegram 50 MB dan katta fayllarni qabul qilmaydi."
         )
         return
 
-    await status_msg.edit_text(f"📤 ZIP yuborilmoqda ({zip_size_mb:.1f} MB)...")
+    await status_msg.edit_text(f"📤 ZIP yuborilmoqda ({size_mb:.1f} MB)...")
 
-    safe_name = re.sub(r"[^A-Za-z0-9_-]", "_", pack_name)
-    zip_filename = f"{safe_name}.zip"
+    safe = re.sub(r"[^A-Za-z0-9_-]", "_", pack_name)
+    caption = (
+        f"✅ <b>{title}</b>\n"
+        f"📁 {total - failed}/{total} fayl\n"
+        f"📦 {size_mb:.1f} MB"
+    )
+    if failed:
+        caption += f"\n⚠️ {failed} ta fayl yuklanmadi"
 
     await update.message.reply_document(
         document=zip_buffer,
-        filename=zip_filename,
-        caption=(
-            f"✅ <b>{set_title}</b>\n"
-            f"📁 {total} ta fayl\n"
-            f"📦 {zip_size_mb:.1f} MB\n\n"
-            f"Fayllar tartib raqami bilan nomlangan (01_, 02_, ...)."
-        ),
+        filename=f"{safe}.zip",
+        caption=caption,
         parse_mode="HTML",
     )
     await status_msg.delete()
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main():
     if not BOT_TOKEN:
-        print("❌ BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan!")
-        print("   export BOT_TOKEN='sizning_token_bu_yerga'")
+        print("❌ BOT_TOKEN o'rnatilmagan!")
+        print("   export BOT_TOKEN='tokeningiz'")
         return
 
     app = Application.builder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_cmd))
+    app.add_handler(CallbackQueryHandler(help_button, pattern="^help$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
 
-    print("🤖 Bot ishga tushdi...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    print("🤖 Bot ishga tushdi! Ctrl+C — to'xtatish")
+    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
 
 if __name__ == "__main__":
