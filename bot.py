@@ -234,18 +234,18 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             return
         sess = sessions[uid]
         sticker = sess["stickers"][idx]
-        digits = len(str(len(sess["stickers"])))
-        name = emoji_to_name(sticker.emoji or "")
-        filename = f"{str(idx+1).zfill(digits)}_{name}{sess['ext']}"
+        single_name = f"alpha{sess['ext']}"
 
         wait = await query.message.reply_text("⏳ Downloading...")
         try:
             tg_file = await ctx.bot.get_file(sticker.file_id)
             fb = bytes(await tg_file.download_as_bytearray())
             buf = io.BytesIO(fb)
+            buf.name = single_name
             await query.message.reply_document(
-                document=buf, filename=filename,
-                caption=f"✅ <code>{filename}</code>", parse_mode="HTML",
+                document=buf,
+                filename=single_name,
+                caption=f"✅ {sticker.emoji or ''}",
             )
             await wait.delete()
         except Exception as e:
