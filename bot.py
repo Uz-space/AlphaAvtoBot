@@ -19,7 +19,7 @@ from telegram.ext import (
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8996187608:AAFaCrrqwqoF6HKRnwJ336hNGyn2Nwa7O_Q")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8245157509:AAH-6vwB3dPc_nywtG9XCpPhI6skT9UDThU")
 sessions: dict = {}
 
 
@@ -61,14 +61,9 @@ def make_keyboard(uid: int) -> InlineKeyboardMarkup:
 
     rows = [
         [
-            nav_btn("❮2", -2),
-            nav_btn("❮4", -4),
-            nav_btn("❮6", -6),
-            nav_btn("❮8", -8),
-            nav_btn("❮10", -10),
-        ],
-        [
+            nav_btn("⬅️", -1),
             InlineKeyboardButton(f"#{idx+1} / {total}", callback_data="noop"),
+            nav_btn("➡️", +1),
         ],
         [
             nav_btn("2❯", +2),
@@ -77,9 +72,9 @@ def make_keyboard(uid: int) -> InlineKeyboardMarkup:
             nav_btn("8❯", +8),
             nav_btn("10❯", +10),
         ],
-        [InlineKeyboardButton("🔢 Jump to #", callback_data=f"jump:{uid}")],
-        [InlineKeyboardButton("📥 Download this emoji", callback_data=f"dl1:{uid}:{idx}")],
-        [InlineKeyboardButton("📦 Download all as ZIP", callback_data=f"zip:{uid}")],
+        [InlineKeyboardButton("🔢 Jump to #", callback_data=f"jump:{uid}", style="primary")],
+        [InlineKeyboardButton("📥 Download this emoji", callback_data=f"dl1:{uid}:{idx}", style="success")],
+        [InlineKeyboardButton("📦 Download all as ZIP", callback_data=f"zip:{uid}", style="danger")],
     ]
     return InlineKeyboardMarkup(rows)
 
