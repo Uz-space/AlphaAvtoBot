@@ -245,7 +245,6 @@ async def on_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_document(
                 document=buf,
                 filename=single_name,
-                caption=f"✅ {sticker.emoji or ''}",
             )
             await wait.delete()
         except Exception as e:
