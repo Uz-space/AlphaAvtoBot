@@ -90,6 +90,14 @@ def get_texts(lang_code: str):
             "copy_address": "📋 Nusxalash"
         }
 
+# ==================== PROGRESS BAR ====================
+def create_progress(percent: int):
+    filled = int(percent / 100 * 20)
+    empty = 20 - filled
+    progress_bar = "▓" * filled + "░" * empty
+    percent_text = f"{percent:>4}%"
+    return f"{progress_bar}{percent_text}"
+
 # ==================== TUGMA YARATISH ====================
 def create_premium_button(code: str, info: dict):
     text = f"{info['name']} ({code})"
@@ -100,6 +108,26 @@ def create_premium_button(code: str, info: dict):
         style=info.get('color', 'primary'),
         icon_custom_emoji_id=info['emoji_id']
     )
+
+# ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
+async def show_crypto_with_progress(update: Update, context: ContextTypes.DEFAULT_TYPE, msg):
+    crypto_list = list(CRYPTO_DATA.items())
+    keyboard = []
+    
+    for i, (code, info) in enumerate(crypto_list):
+        await asyncio.sleep(0.4)
+        button = create_premium_button(code, info)
+        keyboard.append([button])
+        percent = int((i + 1) / len(crypto_list) * 100)
+        progress = create_progress(percent)
+        
+        await msg.edit_text(
+            f"```\n{progress}\n```",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    return keyboard
 
 # ==================== TIL TANLASH ====================
 async def language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -138,32 +166,19 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_language[user_id] = lang_code
     
-    # Tanlangan tilni ko'rsatish
-    lang_info = LANGUAGES[lang_code]
+    # Progress bar bilan kriptovalyutalarni ko'rsatish
+    msg = await query.edit_message_text("⏳")
+    keyboard = await show_crypto_with_progress(update, context, msg)
+    
     texts = get_texts(lang_code)
     
-    # Tilga mos xabar
-    if lang_code == "en":
-        msg = f"{lang_info['flag']} {lang_info['name']} selected! ✅\n\n{texts['select_crypto']}"
-    elif lang_code == "ru":
-        msg = f"{lang_info['flag']} {lang_info['name']} выбран! ✅\n\n{texts['select_crypto']}"
-    else:
-        msg = f"{lang_info['flag']} {lang_info['name']} tanlandi! ✅\n\n{texts['select_crypto']}"
-    
-    await query.edit_message_text(
-        msg,
-        reply_markup=InlineKeyboardMarkup(get_main_keyboard())
+    # Progress bar to'liq bo'lgandan keyin matnni chiqarish
+    progress = create_progress(100)
+    await msg.edit_text(
+        f"```\n{progress}\n```\n\n{texts['select_crypto']}",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
-
-# ==================== ASOSIY KEYBOARD ====================
-def get_main_keyboard():
-    keyboard = []
-    
-    for code, info in CRYPTO_DATA.items():
-        button = create_premium_button(code, info)
-        keyboard.append([button])
-    
-    return keyboard
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -213,9 +228,15 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang_code = user_language.get(user_id, "uz")
     texts = get_texts(lang_code)
     
-    await query.edit_message_text(
-        texts['select_crypto'],
-        reply_markup=InlineKeyboardMarkup(get_main_keyboard())
+    # Progress bar bilan qaytish
+    msg = await query.edit_message_text("⏳")
+    keyboard = await show_crypto_with_progress(update, context, msg)
+    
+    progress = create_progress(100)
+    await msg.edit_text(
+        f"```\n{progress}\n```\n\n{texts['select_crypto']}",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 # ==================== ADMIN ====================
