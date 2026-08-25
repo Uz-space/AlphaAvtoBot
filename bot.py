@@ -150,11 +150,9 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
 
-    # HTML format: <tg-emoji emoji-id="EMOJI_ID">EMOJI</tg-emoji>
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     if address:
-        # Manzil bor - emoji va manzil monospacedda, faqat bosh sahifa tugmasi
         keyboard = [[
             InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
         ]]
@@ -165,7 +163,6 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
-        # Manzil yo'q - emoji va "Manzil yo'q" bir qatorda
         keyboard = [[
             InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
         ]]
@@ -210,11 +207,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for crypto, info in CRYPTO_DATA.items():
         addr = crypto_addresses[crypto]
         
+        # ✅ va ❌ belgilarini olib tashladik
         if addr:
-            btn_text = f"✅ {crypto} - yangilash"
+            btn_text = f"{crypto} - yangilash"
             btn_style = "success"
         else:
-            btn_text = f"❌ {crypto} - kiritish"
+            btn_text = f"{crypto} - kiritish"
             btn_style = "danger"
 
         keyboard.append([InlineKeyboardButton(
