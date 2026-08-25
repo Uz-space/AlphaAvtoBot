@@ -104,10 +104,10 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "DOGE": "$0.15"
     }
     
-    text = "📊 **Kurslar**\n\n"
+    text = "📊 <b>Kurslar</b>\n\n"
     for code, price in prices.items():
         info = CRYPTO_DATA[code]
-        text += f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji> <b>{code}</b>: {price}\n'
+        text += f'<tg-emoji emoji-id="{info["emoji_id"]}">&#8203;</tg-emoji> <b>{code}</b>: {price}\n'
     
     keyboard = [[
         InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
@@ -141,7 +141,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== CRYPTO CALLBACK - HTML FORMAT ====================
+# ==================== CRYPTO CALLBACK - TO'G'RI ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -150,19 +150,19 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
 
-    # HTML format: <tg-emoji emoji-id="EMOJI_ID">EMOJI</tg-emoji>
-    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
+    # HTML format - ichida ko'rinmas belgi
+    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">&#8203;</tg-emoji>'
 
     if address:
+        # Manzil bor - emoji + manzil (bir qatorda)
         await query.edit_message_text(
-            f"{emoji}\n\n"
-            f"<code>{address}</code>",
+            f"{emoji} <code>{address}</code>",
             parse_mode="HTML"
         )
     else:
+        # Manzil yo'q - emoji + "❌ Manzil yo'q" (bir qatorda)
         await query.edit_message_text(
-            f"{emoji}\n\n"
-            f"❌ Manzil yo'q",
+            f"{emoji} ❌ Manzil yo'q",
             parse_mode="HTML"
         )
 
