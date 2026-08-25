@@ -141,7 +141,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== CRYPTO CALLBACK - TO'G'RI ====================
+# ==================== CRYPTO CALLBACK - SODDA VA ISHONCHLI ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -150,18 +150,20 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
 
-    # Premium emoji - faqat emoji ko'rinadi
-    emoji = f"[‎](tg://emoji?id={info['emoji_id']})"
+    # Premium emoji + kripto nomi
+    emoji_text = f"[{crypto}](tg://emoji?id={info['emoji_id']})"
 
     if address:
+        # Manzil bor - emoji + manzil
         await query.edit_message_text(
-            f"{emoji}\n\n"
+            f"{emoji_text}\n\n"
             f"```\n{address}\n```",
             parse_mode="Markdown"
         )
     else:
+        # Manzil yo'q - emoji + "Manzil yo'q"
         await query.edit_message_text(
-            f"{emoji}\n\n"
+            f"{emoji_text}\n\n"
             f"❌ Manzil yo'q",
             parse_mode="Markdown"
         )
