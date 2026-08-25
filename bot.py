@@ -54,7 +54,7 @@ def create_progress(percent: int):
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳", parse_mode="HTML")
+    msg = await update.message.reply_text("⏳", parse_mode="Markdown")
     
     crypto_list = list(CRYPTO_DATA.items())
     keyboard = []
@@ -66,8 +66,8 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         percent = int((i + 1) / len(crypto_list) * 100)
         progress = create_progress(percent)
         await msg.edit_text(
-            f"<code>{progress}</code>",
-            parse_mode="HTML",
+            f"```\n{progress}\n```",
+            parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
@@ -79,8 +79,8 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
     
     progress = create_progress(100)
     await msg.edit_text(
-        f"<code>{progress}</code>",
-        parse_mode="HTML",
+        f"```\n{progress}\n```",
+        parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -104,7 +104,7 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "DOGE": "$0.15"
     }
     
-    text = "📊 <b>Kurslar</b>\n\n"
+    text = "📊 **Kurslar**\n\n"
     for code, price in prices.items():
         info = CRYPTO_DATA[code]
         text += f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji> <b>{code}</b>: {price}\n'
@@ -141,7 +141,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== CRYPTO CALLBACK - HTML ====================
+# ==================== CRYPTO CALLBACK - HTML FORMAT ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -150,20 +150,20 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
 
-    # HTML format: <tg-emoji emoji-id="ID">EMOJI</tg-emoji>
-    # Ichiga ko'rinmas belgi qo'yamiz
-    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">&#8203;</tg-emoji>'
+    # HTML format: <tg-emoji emoji-id="EMOJI_ID">EMOJI</tg-emoji>
+    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     if address:
-        # Manzil bor - emoji + manzil (bir qatorda)
         await query.edit_message_text(
-            f"{emoji} <code>{address}</code>",
+            f"{emoji} {info['name']} ({crypto})\n\n"
+            f"<code>{address}</code>",
             parse_mode="HTML"
         )
     else:
-        # Manzil yo'q - emoji + "Manzil yo'q" (bir qatorda)
+        # Manzil yo'q - emoji bilan chiqaramiz
         await query.edit_message_text(
-            f"{emoji} ❌ Manzil yo'q",
+            f"{emoji} {info['name']} ({crypto})\n\n"
+            f"❌ Manzil yo'q",
             parse_mode="HTML"
         )
 
@@ -185,8 +185,8 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     progress = create_progress(100)
     await query.edit_message_text(
-        f"<code>{progress}</code>",
-        parse_mode="HTML",
+        f"```\n{progress}\n```",
+        parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -200,6 +200,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for crypto, info in CRYPTO_DATA.items():
         addr = crypto_addresses[crypto]
+        
+        # Emoji bilan chiqaramiz
+        emoji_text = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
         
         if addr:
             btn_text = f"✅ {crypto} - yangilash"
@@ -234,14 +237,17 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     admin_edit_target[user_id] = crypto
 
     current = crypto_addresses[crypto]
-    current_text = f"\nHozirgi: <code>{current}</code>" if current else "\nHozirgi: yo'q"
+    info = CRYPTO_DATA.get(crypto, {})
+    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
+    
+    current_text = f"\nHozirgi: <code>{current}</code>" if current else f"\n{emoji} Hozirgi: yo'q"
 
     cancel_keyboard = [[
         InlineKeyboardButton("❌ Bekor", callback_data="cancel_action", style="danger")
     ]]
 
     await query.edit_message_text(
-        f"✏️ <b>{crypto}</b> manzilini yuboring:{current_text}",
+        f"{emoji} ✏️ <b>{crypto}</b> manzilini yuboring:{current_text}",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(cancel_keyboard)
     )
@@ -261,10 +267,12 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     new_address = update.message.text.strip()
     crypto_addresses[crypto] = new_address
+    info = CRYPTO_DATA.get(crypto, {})
+    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
     del admin_edit_target[user_id]
     
     await update.message.reply_text(
-        f"✅ <b>{crypto}</b> manzili o'zgartirildi!\n\n"
+        f"{emoji} ✅ <b>{crypto}</b> manzili o'zgartirildi!\n\n"
         f"<code>{new_address}</code>",
         parse_mode="HTML"
     )
