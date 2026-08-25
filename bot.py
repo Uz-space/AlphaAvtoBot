@@ -12,7 +12,6 @@ ADMIN_IDS = [8758410535]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING (Son shaklid
 
 logging.basicConfig(level=logging.INFO)
 
-# Telegram Bot API 9.4+ uchun mos keladigan aktiv Custom Emoji ID-lari
 CRYPTO_DATA = {
     "BTC": {"name": "Bitcoin", "emoji_id": "5215346446429103945"},
     "ETH": {"name": "Ethereum", "emoji_id": "5215357136602698456"},
@@ -34,15 +33,15 @@ def is_admin(user_id: int) -> bool:
 
 def build_keyboard():
     """
-    Bot yaratuvchisida Telegram Premium bo'lishi talab etiladi.
-    icon_custom_emoji_id orqali chiroyli premium iconlar chiqadi.
+    Foydalanuvchiga barcha kripto tugmalari Moviy (primary) rangda ko'rinadi.
     """
     keyboard = []
     for code, info in CRYPTO_DATA.items():
         keyboard.append([InlineKeyboardButton(
             text=f" {info['name']} ({code})",
             callback_data=f"crypto_{code}",
-            icon_custom_emoji_id=info['emoji_id']  # Yangi Telegram funksiyasi
+            icon_custom_emoji_id=info['emoji_id'],
+            style="primary"  # 🔵 TUGMA KO'K (PRIMARY) RANGDA BO'LADI
         )])
     return InlineKeyboardMarkup(keyboard)
 
@@ -63,6 +62,7 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     crypto = query.data.replace("crypto_", "")
     address = crypto_addresses.get(crypto, "")
 
+    # Orqaga qaytish tugmasi neytral (oddiy) ko'rinishda qoladi
     back_keyboard = [[InlineKeyboardButton("⬅️ Orqaga", callback_data="back_start")]]
 
     if not address:
@@ -100,14 +100,23 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for crypto in CRYPTO_DATA.keys():
         addr = crypto_addresses[crypto]
-        status = "🟢" if addr else "🔴"
+        
+        # Manzil bor bo'lsa yashil tugma, yo'q bo'lsa qizil tugma chiqadi
+        if addr:
+            btn_text = f"✅ {crypto} manzilini yangilash"
+            btn_style = "success"  # 🟢 TUGMA YASHIL RANGDA BO'LADI
+        else:
+            btn_text = f"❌ {crypto} manzilini kiritish"
+            btn_style = "danger"   # 🔴 TUGMA QIZIL RANGDA BO'LADI
+
         keyboard.append([InlineKeyboardButton(
-            f"{status} {crypto} manzilini sozlash",
-            callback_data=f"admin_edit_{crypto}"
+            text=btn_text,
+            callback_data=f"admin_edit_{crypto}",
+            style=btn_style
         )])
 
     await update.message.reply_text(
-        "⚙️ **Admin Panel**\n\n🟢 = Adres tayyor\n🔴 = Adres yo'q\n\nTizimni o'zgartirish uchun tangani tanlang:",
+        "⚙️ **Admin Panel**\n\n🟩 Yashil tugmalar = Adres kiritilgan\n🟥 Qizil tugmalar = Adres kiritilmagan\n\nO'zgartirish uchun tangani tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
@@ -128,9 +137,13 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     current = crypto_addresses[crypto]
     current_text = f"\nHozirgi manzil: `{current}`" if current else "\nHozirgi manzil: kiritilmagan"
 
+    # Bekor qilish tugmasi qizil (danger) dizaynda bo'ladi
+    cancel_keyboard = [[InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_action", style="danger")]]
+
     await query.edit_message_text(
-        f"✏️ **{crypto}** uchun yangi hamyon manzilini (adres) yuboring:{current_text}\n\nBekor qilish uchun: /cancel",
-        parse_mode="Markdown"
+        f"✏️ **{crypto}** uchun yangi hamyon manzilini (adres) yuboring:{current_text}",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(cancel_keyboard)
     )
     return WAITING_ADDRESS
 
@@ -154,12 +167,20 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     return ConversationHandler.END
 
-# ==================== /cancel ====================
+# ==================== Cancel Callback & Command ====================
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id in admin_edit_target:
-        del admin_edit_target[user_id]
-    await update.message.reply_text("❌ Jarayon bekor qilindi.")
+    # CallbackQuery yoki oddiy xabar orqali kelganini tekshirish
+    target_user = update.effective_user.id
+    if target_user in admin_edit_target:
+        del admin_edit_target[target_user]
+
+    msg_text = "❌ Jarayon bekor qilindi."
+    if update.callback_query:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(msg_text)
+    else:
+        await update.message.reply_text(msg_text)
+        
     return ConversationHandler.END
 
 # ==================== MAIN START ====================
@@ -171,7 +192,10 @@ def main():
         states={
             WAITING_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_address)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CallbackQueryHandler(cancel, pattern="^cancel_action$")
+        ],
     )
 
     app.add_handler(CommandHandler("start", start))
@@ -181,7 +205,7 @@ def main():
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
 
-    print("🤖 Bot muvaffaqiyatli ishga tushdi...")
+    print("🤖 Rangli tugmalarga ega bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
 
 if __name__ == "__main__":
