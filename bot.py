@@ -84,86 +84,6 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== 1-2-3-2 FORMAT ====================
-async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳", parse_mode="Markdown")
-    
-    crypto_list = list(CRYPTO_DATA.items())
-    layout = [1, 2, 3, 2]
-    keyboard = []
-    index = 0
-    
-    for row_count in layout:
-        await asyncio.sleep(0.5)
-        row = []
-        for _ in range(row_count):
-            if index < len(crypto_list):
-                code, info = crypto_list[index]
-                button = create_premium_button(code, info)
-                row.append(button)
-                index += 1
-        if row:
-            keyboard.append(row)
-            percent = int(index / len(crypto_list) * 100)
-            progress = create_progress(percent)
-            await msg.edit_text(
-                f"```\n{progress}\n```",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-    
-    await asyncio.sleep(0.3)
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
-    
-    progress = create_progress(100)
-    await msg.edit_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-# ==================== 2 TADAN ====================
-async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳", parse_mode="Markdown")
-    
-    crypto_list = list(CRYPTO_DATA.items())
-    keyboard = []
-    row = []
-    
-    for i, (code, info) in enumerate(crypto_list):
-        await asyncio.sleep(0.3)
-        button = create_premium_button(code, info)
-        row.append(button)
-        if (i + 1) % 2 == 0:
-            keyboard.append(row)
-            row = []
-            percent = int((i + 1) / len(crypto_list) * 100)
-            progress = create_progress(percent)
-            await msg.edit_text(
-                f"```\n{progress}\n```",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-    
-    if row:
-        keyboard.append(row)
-    
-    await asyncio.sleep(0.3)
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
-    
-    progress = create_progress(100)
-    await msg.edit_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_crypto_one_by_one(update, context)
@@ -221,7 +141,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== CRYPTO CALLBACK - TO'G'RILANGAN ====================
+# ==================== CRYPTO CALLBACK - TO'G'RI ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -230,18 +150,16 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
 
-    # Faqat premium emoji (nomisiz)
-    emoji = f"[⠀](tg://emoji?id={info['emoji_id']})"  # bo'sh joy - faqat emoji ko'rinadi
+    # Premium emoji - faqat emoji ko'rinadi
+    emoji = f"[‎](tg://emoji?id={info['emoji_id']})"
 
     if address:
-        # Manzil bor - faqat emoji + manzil
         await query.edit_message_text(
             f"{emoji}\n\n"
             f"```\n{address}\n```",
             parse_mode="Markdown"
         )
     else:
-        # Manzil yo'q - faqat emoji + "Manzil yo'q"
         await query.edit_message_text(
             f"{emoji}\n\n"
             f"❌ Manzil yo'q",
