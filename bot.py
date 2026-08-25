@@ -6,7 +6,7 @@ from telegram.ext import (
 )
 
 # ===================== TOKEN =====================
-BOT_TOKEN = ""
+BOT_TOKEN = "8768572368:AAF20AL0KGW8AziA9WsPx4XHZDAJjB6zZys"
 ADMIN_IDS = [8758410535]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING
 # =================================================
 
