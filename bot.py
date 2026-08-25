@@ -33,6 +33,11 @@ admin_edit_target = {}
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
+# ==================== EMOJI YARATISH ====================
+def get_emoji_html(emoji_id: str, fallback: str = "🪙") -> str:
+    """Custom emoji ni HTML formatda qaytaradi"""
+    return f'<emoji id="{emoji_id}">{fallback}</emoji>'
+
 # ==================== TUGMA YARATISH ====================
 def create_premium_button(code: str, info: dict):
     text = f"{info['name']} ({code})"
@@ -44,25 +49,19 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (DOIM BIR XIL UZUNLIKDA) ====================
+# ==================== PROGRESS BAR ====================
 def create_progress(percent: int):
-    """Progress bar doim 24 belgi - 20 belgi progress + 4 belgi foiz"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
-    
-    # Foizni doim 4 ta belgi qilib formatlash (chapga tekislab)
-    # "   0%", "  10%", "  50%", " 100%"
     percent_text = f"{percent:>4}%"
-    
-    # Progress bar + foiz (doim 24 belgi)
     return f"{progress_bar}{percent_text}"
 
-# ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
+# ==================== TUGMALARNI KO'RSATISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text(
         "⏳",
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
     
     crypto_list = list(CRYPTO_DATA.items())
@@ -78,8 +77,8 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         progress = create_progress(percent)
         
         await msg.edit_text(
-            f"```\n{progress}\n```",
-            parse_mode="Markdown",
+            f"<pre>{progress}</pre>",
+            parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
@@ -92,16 +91,15 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
     progress = create_progress(100)
     
     await msg.edit_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
+        f"<pre>{progress}</pre>",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== 1-2-3-2 FORMAT ====================
 async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text(
         "⏳",
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
     
     crypto_list = list(CRYPTO_DATA.items())
@@ -127,8 +125,8 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
             progress = create_progress(percent)
             
             await msg.edit_text(
-                f"```\n{progress}\n```",
-                parse_mode="Markdown",
+                f"<pre>{progress}</pre>",
+                parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
     
@@ -141,16 +139,15 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     progress = create_progress(100)
     
     await msg.edit_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
+        f"<pre>{progress}</pre>",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== 2 TADAN ====================
 async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text(
         "⏳",
-        parse_mode="Markdown"
+        parse_mode="HTML"
     )
     
     crypto_list = list(CRYPTO_DATA.items())
@@ -171,8 +168,8 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
             progress = create_progress(percent)
             
             await msg.edit_text(
-                f"```\n{progress}\n```",
-                parse_mode="Markdown",
+                f"<pre>{progress}</pre>",
+                parse_mode="HTML",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
     
@@ -188,8 +185,8 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
     progress = create_progress(100)
     
     await msg.edit_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
+        f"<pre>{progress}</pre>",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -213,10 +210,11 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "DOGE": "$0.15"
     }
     
-    text = "📊 **Kurslar**\n\n"
+    text = "📊 <b>Kurslar</b>\n\n"
     for code, price in prices.items():
         info = CRYPTO_DATA[code]
-        text += f"[](tg://emoji?id={info['emoji_id']}) **{code}:** {price}\n"
+        emoji = get_emoji_html(info['emoji_id'])
+        text += f"{emoji} <b>{code}:</b> {price}\n"
     
     keyboard = [[
         InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
@@ -225,7 +223,7 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         text,
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -234,7 +232,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     text = (
-        "❓ **Yordam**\n\n"
+        "❓ <b>Yordam</b>\n\n"
         "1️⃣ Kriptovalyutani tanlang\n"
         "2️⃣ Manzilni nusxalang\n"
         "3️⃣ To'lovni yuboring"
@@ -246,7 +244,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         text,
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -263,19 +261,22 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary")
     ]]
 
+    # Custom emoji ni olish
+    emoji = get_emoji_html(info['emoji_id'])
+
     if not address:
         await query.edit_message_text(
-            f"⚠️ [](tg://emoji?id={info['emoji_id']}) **{crypto}** manzili yo'q\n⏳ Admin qo'shadi",
-            parse_mode="Markdown",
+            f"⚠️ {emoji} <b>{crypto}</b> manzili yo'q\n⏳ Admin qo'shadi",
+            parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(back_keyboard),
         )
         return
 
     await query.edit_message_text(
-        f"💳 [](tg://emoji?id={info['emoji_id']}) **{crypto}**\n\n"
-        f"```\n{address}\n```\n\n"
+        f"💳 {emoji} <b>{crypto}</b>\n\n"
+        f"<code>{address}</code>\n\n"
         f"📤 Yuqoridagi manzilga to'lov yuboring",
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(back_keyboard),
     )
 
@@ -298,8 +299,8 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     progress = create_progress(100)
     
     await query.edit_message_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
+        f"<pre>{progress}</pre>",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -329,8 +330,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )])
 
     await update.message.reply_text(
-        "⚙️ **Admin Panel**",
-        parse_mode="Markdown",
+        "⚙️ <b>Admin Panel</b>",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
@@ -347,15 +348,15 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     admin_edit_target[user_id] = crypto
 
     current = crypto_addresses[crypto]
-    current_text = f"\nHozirgi: `{current}`" if current else "\nHozirgi: yo'q"
+    current_text = f"\nHozirgi: <code>{current}</code>" if current else "\nHozirgi: yo'q"
 
     cancel_keyboard = [[
         InlineKeyboardButton("❌ Bekor", callback_data="cancel_action", style="danger")
     ]]
 
     await query.edit_message_text(
-        f"✏️ **{crypto}** manzilini yuboring:{current_text}",
-        parse_mode="Markdown",
+        f"✏️ <b>{crypto}</b> manzilini yuboring:{current_text}",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(cancel_keyboard)
     )
     return WAITING_ADDRESS
@@ -377,9 +378,9 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del admin_edit_target[user_id]
     
     await update.message.reply_text(
-        f"✅ **{crypto}** manzili o'zgartirildi!\n\n"
-        f"```\n{new_address}\n```",
-        parse_mode="Markdown"
+        f"✅ <b>{crypto}</b> manzili o'zgartirildi!\n\n"
+        f"<code>{new_address}</code>",
+        parse_mode="HTML"
     )
     
     return ConversationHandler.END
