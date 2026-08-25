@@ -107,7 +107,7 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "📊 **Kurslar**\n\n"
     for code, price in prices.items():
         info = CRYPTO_DATA[code]
-        text += f"[{code}](tg://emoji?id={info['emoji_id']}) **{code}:** {price}\n"
+        text += f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji> <b>{code}</b>: {price}\n'
     
     keyboard = [[
         InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
@@ -116,7 +116,7 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         text,
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -125,7 +125,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     text = (
-        "❓ **Yordam**\n\n"
+        "❓ <b>Yordam</b>\n\n"
         "1️⃣ Kriptovalyutani tanlang\n"
         "2️⃣ Manzilni nusxalang\n"
         "3️⃣ To'lovni yuboring"
@@ -137,11 +137,11 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         text,
-        parse_mode="Markdown",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== CRYPTO CALLBACK - SODDA VA ISHONCHLI ====================
+# ==================== CRYPTO CALLBACK - HTML FORMAT ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -150,22 +150,20 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
 
-    # Premium emoji + kripto nomi
-    emoji_text = f"[{crypto}](tg://emoji?id={info['emoji_id']})"
+    # HTML format: <tg-emoji emoji-id="EMOJI_ID">EMOJI</tg-emoji>
+    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     if address:
-        # Manzil bor - emoji + manzil
         await query.edit_message_text(
-            f"{emoji_text}\n\n"
-            f"```\n{address}\n```",
-            parse_mode="Markdown"
+            f"{emoji}\n\n"
+            f"<code>{address}</code>",
+            parse_mode="HTML"
         )
     else:
-        # Manzil yo'q - emoji + "Manzil yo'q"
         await query.edit_message_text(
-            f"{emoji_text}\n\n"
+            f"{emoji}\n\n"
             f"❌ Manzil yo'q",
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
 
 async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -217,8 +215,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )])
 
     await update.message.reply_text(
-        "⚙️ **Admin Panel**",
-        parse_mode="Markdown",
+        "⚙️ <b>Admin Panel</b>",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
@@ -235,15 +233,15 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     admin_edit_target[user_id] = crypto
 
     current = crypto_addresses[crypto]
-    current_text = f"\nHozirgi: `{current}`" if current else "\nHozirgi: yo'q"
+    current_text = f"\nHozirgi: <code>{current}</code>" if current else "\nHozirgi: yo'q"
 
     cancel_keyboard = [[
         InlineKeyboardButton("❌ Bekor", callback_data="cancel_action", style="danger")
     ]]
 
     await query.edit_message_text(
-        f"✏️ **{crypto}** manzilini yuboring:{current_text}",
-        parse_mode="Markdown",
+        f"✏️ <b>{crypto}</b> manzilini yuboring:{current_text}",
+        parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(cancel_keyboard)
     )
     return WAITING_ADDRESS
@@ -265,9 +263,9 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del admin_edit_target[user_id]
     
     await update.message.reply_text(
-        f"✅ **{crypto}** manzili o'zgartirildi!\n\n"
-        f"```\n{new_address}\n```",
-        parse_mode="Markdown"
+        f"✅ <b>{crypto}</b> manzili o'zgartirildi!\n\n"
+        f"<code>{new_address}</code>",
+        parse_mode="HTML"
     )
     
     return ConversationHandler.END
