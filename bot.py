@@ -53,9 +53,9 @@ admin_edit_target = {}
 
 # ==================== TILLAR ====================
 LANGUAGES = {
-    "en": {"name": "English", "flag": "🇬🇧", "choose": "Choose language:"},
-    "ru": {"name": "Русский", "flag": "🇷🇺", "choose": "Выберите язык:"},
-    "uz": {"name": "O'zbekcha", "flag": "🇺🇿", "choose": "Tilni tanlang:"}
+    "en": {"name": "English", "flag": "🇬🇧"},
+    "ru": {"name": "Русский", "flag": "🇷🇺"},
+    "uz": {"name": "O'zbekcha", "flag": "🇺🇿"}
 }
 
 user_language = {}
@@ -77,18 +77,16 @@ def create_premium_button(code: str, info: dict):
 # ==================== TIL TANLASH ====================
 async def language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [
-            InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"),
-            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"),
-            InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="lang_uz")
-        ]
+        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en", style="primary")],
+        [InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru", style="primary")],
+        [InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="lang_uz", style="primary")]
     ]
     
     # /start dan kelgan bo'lsa
     if update.message:
         await update.message.reply_text(
-            "🌍 Choose language:\n\n"
-            "🌍 Выберите язык:\n\n"
+            "🌍 Choose language:\n"
+            "🌍 Выберите язык:\n"
             "🌍 Tilni tanlang:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -97,8 +95,8 @@ async def language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE)
         query = update.callback_query
         await query.answer()
         await query.edit_message_text(
-            "🌍 Choose language:\n\n"
-            "🌍 Выберите язык:\n\n"
+            "🌍 Choose language:\n"
+            "🌍 Выберите язык:\n"
             "🌍 Tilni tanlang:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -116,14 +114,21 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Tanlangan tilni ko'rsatish
     lang_info = LANGUAGES[lang_code]
     
+    # Tilga mos xabar
+    if lang_code == "en":
+        msg = f"{lang_info['flag']} {lang_info['name']} selected! ✅\n\nSelect a cryptocurrency:"
+    elif lang_code == "ru":
+        msg = f"{lang_info['flag']} {lang_info['name']} выбран! ✅\n\nВыберите криптовалюту:"
+    else:
+        msg = f"{lang_info['flag']} {lang_info['name']} tanlandi! ✅\n\nKriptovalyutani tanlang:"
+    
     await query.edit_message_text(
-        f"{lang_info['flag']} {lang_info['name']} tanlandi! ✅\n\n"
-        f"📊 Kriptovalyutalarni ko'rish uchun quyidagi tugmalardan foydalaning:",
-        reply_markup=InlineKeyboardMarkup(get_main_keyboard(lang_code))
+        msg,
+        reply_markup=InlineKeyboardMarkup(get_main_keyboard())
     )
 
 # ==================== ASOSIY KEYBOARD ====================
-def get_main_keyboard(lang_code: str):
+def get_main_keyboard():
     keyboard = []
     
     for code, info in CRYPTO_DATA.items():
@@ -175,9 +180,17 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     lang_code = user_language.get(user_id, "uz")
     
+    # Tilga mos xabar
+    if lang_code == "en":
+        msg = "Select a cryptocurrency:"
+    elif lang_code == "ru":
+        msg = "Выберите криптовалюту:"
+    else:
+        msg = "Kriptovalyutani tanlang:"
+    
     await query.edit_message_text(
-        f"📊 Kriptovalyutalarni ko'rish uchun quyidagi tugmalardan foydalaning:",
-        reply_markup=InlineKeyboardMarkup(get_main_keyboard(lang_code))
+        msg,
+        reply_markup=InlineKeyboardMarkup(get_main_keyboard())
     )
 
 # ==================== ADMIN ====================
