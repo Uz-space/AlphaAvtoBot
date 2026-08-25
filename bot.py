@@ -59,10 +59,16 @@ def create_progress(percent: int):
 
 # ==================== TUGMALARNI KO'RSATISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text(
-        "⏳",
-        parse_mode="HTML"
-    )
+    # Agar callback_query dan kelgan bo'lsa
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        msg = query.message
+    else:
+        msg = await update.message.reply_text(
+            "⏳",
+            parse_mode="HTML"
+        )
     
     crypto_list = list(CRYPTO_DATA.items())
     keyboard = []
@@ -97,10 +103,15 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
     )
 
 async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text(
-        "⏳",
-        parse_mode="HTML"
-    )
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        msg = query.message
+    else:
+        msg = await update.message.reply_text(
+            "⏳",
+            parse_mode="HTML"
+        )
     
     crypto_list = list(CRYPTO_DATA.items())
     layout = [1, 2, 3, 2]
@@ -145,10 +156,15 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text(
-        "⏳",
-        parse_mode="HTML"
-    )
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        msg = query.message
+    else:
+        msg = await update.message.reply_text(
+            "⏳",
+            parse_mode="HTML"
+        )
     
     crypto_list = list(CRYPTO_DATA.items())
     keyboard = []
@@ -284,25 +300,8 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    crypto_list = list(CRYPTO_DATA.items())
-    keyboard = []
-    
-    for code, info in crypto_list:
-        button = create_premium_button(code, info)
-        keyboard.append([button])
-    
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
-    
-    progress = create_progress(100)
-    
-    await query.edit_message_text(
-        f"<pre>{progress}</pre>",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    # Qaytadan asosiy menyuni ko'rsatish
+    await show_crypto_one_by_one(update, context)
 
 # ==================== ADMIN ====================
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
