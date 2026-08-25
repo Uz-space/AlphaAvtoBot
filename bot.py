@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import json
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
@@ -25,7 +27,26 @@ CRYPTO_DATA = {
     "DOGE": {"name": "Dogecoin", "emoji_id": "5215634149108392152", "color": "success"}
 }
 
-crypto_addresses = {k: "" for k in CRYPTO_DATA.keys()}
+# ==================== MA'LUMOTLARNI FAYLGA SAQLASH ====================
+DATA_FILE = "addresses.json"
+
+def load_addresses():
+    """Fayldan ma'lumotlarni yuklash"""
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {k: "" for k in CRYPTO_DATA.keys()}
+    return {k: "" for k in CRYPTO_DATA.keys()}
+
+def save_addresses(addresses):
+    """Ma'lumotlarni faylga saqlash"""
+    with open(DATA_FILE, 'w') as f:
+        json.dump(addresses, f, indent=2)
+
+# Ma'lumotlarni yuklash
+crypto_addresses = load_addresses()
 
 WAITING_ADDRESS = 1
 admin_edit_target = {}
@@ -205,9 +226,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = []
     for crypto, info in CRYPTO_DATA.items():
-        addr = crypto_addresses[crypto]
+        addr = crypto_addresses.get(crypto, "")
         
-        # ✅ va ❌ belgilarini olib tashladik
         if addr:
             btn_text = f"{crypto} - yangilash"
             btn_style = "success"
@@ -240,7 +260,7 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     crypto = query.data.replace("admin_edit_", "")
     admin_edit_target[user_id] = crypto
 
-    current = crypto_addresses[crypto]
+    current = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
     
@@ -271,6 +291,10 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     new_address = update.message.text.strip()
     crypto_addresses[crypto] = new_address
+    
+    # Ma'lumotlarni faylga saqlash
+    save_addresses(crypto_addresses)
+    
     info = CRYPTO_DATA.get(crypto, {})
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
     del admin_edit_target[user_id]
