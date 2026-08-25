@@ -92,12 +92,6 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
-    await asyncio.sleep(0.3)
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
-    
     progress = create_progress(100)
     await msg.edit_text(
         f"```\n{progress}\n```",
@@ -108,59 +102,6 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await show_crypto_one_by_one(update, context)
-
-# ==================== QOLGAN FUNKSIYALAR ====================
-async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    prices = {
-        "BTC": "$67,500",
-        "ETH": "$3,200", 
-        "BNB": "$550",
-        "SOL": "$145",
-        "LTC": "$85",
-        "TON": "$6.50",
-        "TRX": "$0.12",
-        "DOGE": "$0.15"
-    }
-    
-    text = "📊 **Kurslar**\n\n"
-    for code, price in prices.items():
-        info = CRYPTO_DATA[code]
-        text += f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji> <b>{code}</b>: {price}\n'
-    
-    keyboard = [[
-        InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-    ]]
-    
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    text = (
-        "❓ <b>Yordam</b>\n\n"
-        "1️⃣ Kriptovalyutani tanlang\n"
-        "2️⃣ Manzilni nusxalang\n"
-        "3️⃣ To'lovni yuboring"
-    )
-    
-    keyboard = [[
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-    ]]
-    
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
 
 # ==================== CRYPTO CALLBACK - HTML FORMAT ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -204,11 +145,6 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for code, info in crypto_list:
         button = create_premium_button(code, info)
         keyboard.append([button])
-    
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
     
     progress = create_progress(100)
     await query.edit_message_text(
@@ -343,8 +279,6 @@ def main():
     
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
-    app.add_handler(CallbackQueryHandler(show_prices, pattern="^prices$"))
-    app.add_handler(CallbackQueryHandler(show_help, pattern="^help$"))
 
     print("🤖 Bot ishga tushdi!")
     app.run_polling()
