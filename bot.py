@@ -8,20 +8,20 @@ from telegram.ext import (
 
 # ===================== TOKEN & ID =====================
 BOT_TOKEN = "8930805461:AAGd7e2qPGqu7lJjOLO-Pv1Ha9DkbbniyxM"
-ADMIN_IDS = [8758410535]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING
+ADMIN_IDS = [8758410535]
 # ======================================================
 
 logging.basicConfig(level=logging.INFO)
 
 CRYPTO_DATA = {
-    "BTC": {"name": "Bitcoin", "emoji_id": "5215346446429103945"},
-    "ETH": {"name": "Ethereum", "emoji_id": "5215357136602698456"},
-    "BNB": {"name": "BNB", "emoji_id": "5215553828924995476"},
-    "SOL": {"name": "Solana", "emoji_id": "5215299923343353183"},
-    "LTC": {"name": "Litecoin", "emoji_id": "5215555130300080404"},
-    "TON": {"name": "Toncoin", "emoji_id": "5215261504860891404"},
-    "TRX": {"name": "TRON", "emoji_id": "5215509887114584038"},
-    "DOGE": {"name": "Dogecoin", "emoji_id": "5215634149108392152"}
+    "BTC": {"name": "Bitcoin", "emoji": "₿", "color": "danger"},
+    "ETH": {"name": "Ethereum", "emoji": "⟠", "color": "primary"},
+    "BNB": {"name": "BNB", "emoji": "◆", "color": "success"},
+    "SOL": {"name": "Solana", "emoji": "◎", "color": "primary"},
+    "LTC": {"name": "Litecoin", "emoji": "Ł", "color": "success"},
+    "TON": {"name": "Toncoin", "emoji": "⧫", "color": "primary"},
+    "TRX": {"name": "TRON", "emoji": "◈", "color": "danger"},
+    "DOGE": {"name": "Dogecoin", "emoji": "Ð", "color": "success"}
 }
 
 crypto_addresses = {k: "" for k in CRYPTO_DATA.keys()}
@@ -32,119 +32,302 @@ admin_edit_target = {}
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
-def build_keyboard():
-    keyboard = []
-    for code, info in CRYPTO_DATA.items():
-        btn_kwargs = {
-            "text": f" {info['name']} ({code})",
-            "callback_data": f"crypto_{code}",
-            "icon_custom_emoji_id": info['emoji_id']
-        }
+# ==================== ASOSIY FUNKSIYA: TUGMALARNI BIRMA-BIR QO'SHISH ====================
+async def show_crypto_step_by_step(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Tugmalarni birma-bir qo'shib borish
+    """
+    # Birinchi xabarni yuborish
+    msg = await update.message.reply_text(
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "⏳ Kriptovalyutalar yuklanmoqda...\n"
+        "▌",
+        parse_mode="Markdown"
+    )
+    
+    # Har bir kripto uchun
+    crypto_list = list(CRYPTO_DATA.items())
+    current_buttons = []
+    
+    for i, (code, info) in enumerate(crypto_list):
+        # 0.5 soniya kutish (qo'shish tezligi)
+        await asyncio.sleep(0.7)
         
-        if code in ["BTC", "ETH"]:
-            btn_kwargs["style"] = "danger"
-        elif code in ["BNB", "SOL"]:
-            btn_kwargs["style"] = "success"
-        elif code in ["LTC", "TON"]:
-            btn_kwargs["style"] = "primary"
-
-        keyboard.append([InlineKeyboardButton(**btn_kwargs)])
+        # Yangi tugmani qo'shish
+        button = InlineKeyboardButton(
+            text=f"{info['emoji']} {code}",
+            callback_data=f"crypto_{code}",
+            style=info.get('color', 'primary')
+        )
+        current_buttons.append([button])  # Har biri alohida qatorda
         
-    return InlineKeyboardMarkup(keyboard)
-
-# ==================== STREAMING FUNKSIYASI ====================
-async def stream_message(update: Update, text: str, parse_mode: str = "Markdown"):
-    """Matnni asta-sekin terib chiqaradigan funksiya"""
-    try:
-        # "Yozmoqda..." indikatorini yoqish
-        await update.message.chat.send_action(action="typing")
+        # Keyboard yaratish
+        keyboard = InlineKeyboardMarkup(current_buttons)
         
-        # Xabarni bo'laklarga ajratish (har 3 belgidan)
-        chunk_size = 3
-        message = None
-        current_text = ""
+        # Holat matni
+        progress = "▌" * (i + 1) + " " * (len(crypto_list) - i - 1)
+        status_text = f"💰 **Kripto to'lov tizimi**\n\n"
+        status_text += f"🔄 Yuklanmoqda... {i+1}/{len(crypto_list)}\n"
+        status_text += f"`{progress}`\n\n"
+        status_text += f"✅ {code} qo'shildi!"
         
-        for i in range(0, len(text), chunk_size):
-            current_text += text[i:i+chunk_size]
-            
-            if message is None:
-                # Birinchi xabarni yuborish
-                message = await update.message.reply_text(
-                    current_text + "▌",
-                    parse_mode=parse_mode
-                )
-            else:
-                # Xabarni yangilash
-                try:
-                    await message.edit_text(
-                        current_text + "▌",
-                        parse_mode=parse_mode
-                    )
-                except Exception as e:
-                    logging.error(f"Edit error: {e}")
-                    pass
-            
-            # Har bir bo'lak orasida biroz kutish
-            await asyncio.sleep(0.15)
-        
-        # Yakuniy xabarni kursorsiz jo'natish
-        if message:
-            await message.edit_text(
-                current_text,
-                parse_mode=parse_mode
+        # Xabarni yangilash
+        try:
+            await msg.edit_text(
+                status_text,
+                parse_mode="Markdown",
+                reply_markup=keyboard
             )
+        except Exception as e:
+            logging.error(f"Edit error: {e}")
+    
+    # Yakuniy holat
+    await asyncio.sleep(0.5)
+    await msg.edit_text(
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "✅ Barcha kriptovalyutalar yuklandi!\n"
+        "👇 Quyidagilardan birini tanlang:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(current_buttons)
+    )
+
+# ==================== ALTERNATIV: 1-QATORGA 1 TA, KEYIN 2 TA, KEYIN 3 TA ====================
+async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Tugmalarni chiroyli formatda: 1, 2, 3, 2 ta qilib
+    """
+    msg = await update.message.reply_text(
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "⏳ Yuklanmoqda...",
+        parse_mode="Markdown"
+    )
+    
+    crypto_list = list(CRYPTO_DATA.items())
+    
+    # Qatorlar tartibi: [1, 2, 3, 2]
+    layout = [1, 2, 3, 2]
+    keyboard = []
+    index = 0
+    
+    for row_count in layout:
+        await asyncio.sleep(0.8)  # Har bir qator uchun kutish
         
-        return message
-    except Exception as e:
-        logging.error(f"Stream error: {e}")
-        # Agar streaming ishlamasa, oddiy xabar yuborish
-        await update.message.reply_text(text, parse_mode=parse_mode)
+        row = []
+        for _ in range(row_count):
+            if index < len(crypto_list):
+                code, info = crypto_list[index]
+                button = InlineKeyboardButton(
+                    text=f"{info['emoji']} {code}",
+                    callback_data=f"crypto_{code}",
+                    style=info.get('color', 'primary')
+                )
+                row.append(button)
+                index += 1
+        
+        if row:
+            keyboard.append(row)
+            
+            # Xabarni yangilash
+            progress = f"✅ {index}/{len(crypto_list)} yuklandi"
+            await msg.edit_text(
+                f"💰 **Kripto to'lov tizimi**\n\n"
+                f"⏳ {progress}\n"
+                f"`{'▌' * index}{' ' * (len(crypto_list) - index)}`",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+    
+    # Yakuniy
+    await asyncio.sleep(0.5)
+    keyboard.append([
+        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
+        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
+    ])
+    
+    await msg.edit_text(
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "✅ Barcha kriptovalyutalar yuklandi!\n"
+        "👇 Quyidagilardan birini tanlang:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+# ==================== ALTERNATIV 2: BIRMA-BIR PASTGA TUSHIB BORISH ====================
+async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Har bir kripto alohida qatorda va asta-sekin pastga tushib boradi
+    """
+    msg = await update.message.reply_text(
+        "⏳ Kriptovalyutalar yuklanmoqda...",
+        parse_mode="Markdown"
+    )
+    
+    crypto_list = list(CRYPTO_DATA.items())
+    keyboard = []
+    
+    for i, (code, info) in enumerate(crypto_list):
+        await asyncio.sleep(0.6)
+        
+        # Tugma qo'shish
+        button = InlineKeyboardButton(
+            text=f"{info['emoji']} {code}",
+            callback_data=f"crypto_{code}",
+            style=info.get('color', 'primary')
+        )
+        keyboard.append([button])  # Har biri alohida qatorda
+        
+        # Xabarni yangilash
+        await msg.edit_text(
+            f"💰 **Kripto to'lov tizimi**\n\n"
+            f"✅ {i+1}/{len(crypto_list)} yuklandi\n\n"
+            f"`{'█' * (i+1)}{'░' * (len(crypto_list) - i - 1)}`",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    
+    # Yakuniy
+    await asyncio.sleep(0.5)
+    await msg.edit_text(
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "✅ Barcha kriptovalyutalar yuklandi!\n"
+        "👇 Quyidagilardan birini tanlang:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = build_keyboard()
-    await update.message.reply_text(
-        "💰 **Crypto To'lov Tizimi**\n\nQaysi kriptovalyuta orqali to'lov qilmoqchisiz? Tanlang 👇",
+    # 3 xil usuldan birini tanlang:
+    
+    # 1-usul: Oddiy birma-bir (har biri alohida qatorda)
+    await show_crypto_one_by_one(update, context)
+    
+    # 2-usul: 1-2-3-2 formatda (chiroyli)
+    # await show_crypto_fancy(update, context)
+    
+    # 3-usul: har biri alohida qatorda, lekin progress bilan
+    # await show_crypto_step_by_step(update, context)
+
+# ==================== QOLGAN FUNKSIYALAR ====================
+async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    prices = {
+        "BTC": "$67,500",
+        "ETH": "$3,200", 
+        "BNB": "$550",
+        "SOL": "$145",
+        "LTC": "$85",
+        "TON": "$6.50",
+        "TRX": "$0.12",
+        "DOGE": "$0.15"
+    }
+    
+    text = "📊 **JORIY KURS** (taxminiy)\n\n"
+    for code, price in prices.items():
+        emoji = CRYPTO_DATA[code]['emoji']
+        text += f"{emoji} **{code}:** {price}\n"
+    
+    keyboard = [[
+        InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
+    ]]
+    
+    await query.edit_message_text(
+        text,
         parse_mode="Markdown",
-        reply_markup=keyboard,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== Crypto tanlash ====================
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    text = (
+        "❓ **YORDAM**\n\n"
+        "1️⃣ Kriptovalyutani tanlang\n"
+        "2️⃣ To'lov manzilini nusxalang\n"
+        "3️⃣ Manzilga to'lovni yuboring\n"
+        "4️⃣ To'lov tasdiqlanishini kuting"
+    )
+    
+    keyboard = [[
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
+    ]]
+    
+    await query.edit_message_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     crypto = query.data.replace("crypto_", "")
     address = crypto_addresses.get(crypto, "")
+    info = CRYPTO_DATA.get(crypto, {})
 
-    back_keyboard = [[InlineKeyboardButton("⬅️ Orqaga", callback_data="back_start")]]
+    back_keyboard = [[
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary"),
+        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary")
+    ]]
 
     if not address:
         await query.edit_message_text(
-            f"⚠️ **{crypto}** adresi hali kiritilmagan.\n\nAdmin tez orada manzilni qo'shadi!",
+            f"⚠️ **{info['emoji']} {crypto}** adresi hali kiritilmagan.\n\n"
+            f"⏳ Admin tez orada manzilni qo'shadi!",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(back_keyboard),
         )
         return
 
     await query.edit_message_text(
-        f"💳 **{crypto} Adresi:**\n\n`{address}`\n\nYuqoridagi manzilga to'lovingizni yuboring. ✅\n\n_(Nusxalash uchun adres ustiga bosing)_",
+        f"💳 **{info['emoji']} {crypto} ADRESI**\n\n"
+        f"```\n{address}\n```\n\n"
+        f"📤 Yuqoridagi manzilga to'lovni yuboring.",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(back_keyboard),
     )
 
-# ==================== Orqaga ====================
 async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    keyboard = build_keyboard()
+    
+    # Qaytishda ham xuddi shunday effekt
     await query.edit_message_text(
-        "💰 **Crypto To'lov Tizimi**\n\nQaysi kriptovalyuta orqali to'lov qilmoqchisiz? Tanlang 👇",
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "🔄 Qayta yuklanmoqda...",
+        parse_mode="Markdown"
+    )
+    
+    # Tezda tugmalarni qayta yaratish
+    crypto_list = list(CRYPTO_DATA.items())
+    keyboard = []
+    
+    for code, info in crypto_list:
+        button = InlineKeyboardButton(
+            text=f"{info['emoji']} {code}",
+            callback_data=f"crypto_{code}",
+            style=info.get('color', 'primary')
+        )
+        keyboard.append([button])
+    
+    keyboard.append([
+        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
+        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
+    ])
+    
+    await query.edit_message_text(
+        "💰 **Kripto to'lov tizimi**\n\n"
+        "👇 Quyidagilardan birini tanlang:",
         parse_mode="Markdown",
-        reply_markup=keyboard,
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== /admin ====================
+# ==================== ADMIN FUNKSIYALARI ====================
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not is_admin(user_id):
@@ -152,14 +335,14 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     keyboard = []
-    for crypto in CRYPTO_DATA.keys():
+    for crypto, info in CRYPTO_DATA.items():
         addr = crypto_addresses[crypto]
         
         if addr:
-            btn_text = f"✅ {crypto} manzilini yangilash"
+            btn_text = f"✅ {info['emoji']} {crypto} - yangilash"
             btn_style = "success"
         else:
-            btn_text = f"❌ {crypto} manzilini kiritish"
+            btn_text = f"❌ {info['emoji']} {crypto} - kiritish"
             btn_style = "danger"
 
         keyboard.append([InlineKeyboardButton(
@@ -169,12 +352,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )])
 
     await update.message.reply_text(
-        "⚙️ **Admin Panel**\n\n🟩 Yashil tugmalar = Adres kiritilgan\n🟥 Qizil tugmalar = Adres kiritilmagan\n\nO'zgartirish uchun tangani tanlang:",
+        "⚙️ **ADMIN PANEL**\n\n"
+        "O'zgartirish uchun tangani tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
-# ==================== Admin edit ====================
 async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
@@ -190,49 +373,43 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     current = crypto_addresses[crypto]
     current_text = f"\nHozirgi manzil: `{current}`" if current else "\nHozirgi manzil: kiritilmagan"
 
-    cancel_keyboard = [[InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_action", style="danger")]]
+    cancel_keyboard = [[
+        InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_action", style="danger")
+    ]]
 
     await query.edit_message_text(
-        f"✏️ **{crypto}** uchun yangi hamyon manzilini (adres) yuboring:{current_text}\n\n⏳ Adresni yozing va yuboring:",
+        f"✏️ **{crypto}** uchun yangi hamyon manzilini yuboring:{current_text}",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(cancel_keyboard)
     )
     return WAITING_ADDRESS
 
-# ==================== Adres qabul qilish (FIXED) ====================
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     
-    # Admin tekshiruvi
     if not is_admin(user_id):
         await update.message.reply_text("❌ Siz admin emassiz!")
         return ConversationHandler.END
     
-    # Crypto ni olish
     crypto = admin_edit_target.get(user_id)
     if not crypto:
-        await update.message.reply_text("❌ Xatolik! Iltimos, /admin dan qayta urinib ko'ring.")
+        await update.message.reply_text("❌ Xatolik!")
         return ConversationHandler.END
 
-    # Adresni olish
     new_address = update.message.text.strip()
-    
-    # Adresni saqlash
     crypto_addresses[crypto] = new_address
     del admin_edit_target[user_id]
     
-    # ✅ JAVOB YUBORISH (fix)
+    info = CRYPTO_DATA.get(crypto, {})
+    
     await update.message.reply_text(
-        f"✅ **{crypto}** hamyon manzili muvaffaqiyatli o'zgartirildi!\n\n"
-        f"Yangi manzil: `{new_address}`\n\n"
-        f"/admin — Panelga qaytish\n"
-        f"/start — Botni ko'rish",
+        f"✅ **{info['emoji']} {crypto}** manzili o'zgartirildi!\n\n"
+        f"```\n{new_address}\n```",
         parse_mode="Markdown"
     )
     
     return ConversationHandler.END
 
-# ==================== Cancel Callback & Command ====================
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_user = update.effective_user.id
     if target_user in admin_edit_target:
@@ -247,27 +424,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     return ConversationHandler.END
 
-# ==================== ADMIN STATISTIKA ====================
-async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if not is_admin(user_id):
-        await update.message.reply_text("❌ Siz admin emassiz!")
-        return
-    
-    total = len(crypto_addresses)
-    filled = sum(1 for addr in crypto_addresses.values() if addr)
-    
-    stats_text = (
-        f"📊 **Statistika**\n\n"
-        f"💼 Umumiy kripto: {total}\n"
-        f"✅ Manzil kiritilgan: {filled}\n"
-        f"❌ Manzil kiritilmagan: {total - filled}\n\n"
-        f"🔢 Foiz: {int(filled/total*100)}%"
-    )
-    
-    await update.message.reply_text(stats_text, parse_mode="Markdown")
-
-# ==================== MAIN START ====================
+# ==================== MAIN ====================
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
@@ -284,13 +441,15 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin_panel))
-    app.add_handler(CommandHandler("stats", admin_stats))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(conv_handler)
+    
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
+    app.add_handler(CallbackQueryHandler(show_prices, pattern="^prices$"))
+    app.add_handler(CallbackQueryHandler(show_help, pattern="^help$"))
 
-    print("🤮 Bot ishga tushdi...")
+    print("🤖 Bot ishga tushdi! Tugmalar birma-bir qo'shiladi...")
     app.run_polling()
 
 if __name__ == "__main__":
