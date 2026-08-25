@@ -6,13 +6,12 @@ from telegram.ext import (
 )
 
 # ===================== TOKEN =====================
-BOT_TOKEN = "8768572368:AAF20AL0KGW8AziA9WsPx4XHZDAJjB6zZys"
+BOT_TOKEN = ""
 ADMIN_IDS = [8758410535]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING
 # =================================================
 
 logging.basicConfig(level=logging.INFO)
 
-# Crypto ma'lumotlari
 CRYPTOS = ["BTC", "ETH", "BNB", "SOL", "LTC", "TON", "TRX", "DOGE"]
 
 CRYPTO_EMOJIS = {
@@ -26,7 +25,6 @@ CRYPTO_EMOJIS = {
     "DOGE": "5215634149108392152",
 }
 
-# Adreslar (admin panel orqali o'zgartiriladi)
 crypto_addresses = {
     "BTC":  "",
     "ETH":  "",
@@ -38,39 +36,35 @@ crypto_addresses = {
     "DOGE": "",
 }
 
-# ConversationHandler states
 WAITING_ADDRESS = 1
-admin_edit_target = {}  # user_id -> crypto nomi
+admin_edit_target = {}
 
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
 
-def custom_emoji(crypto: str) -> str:
-    eid = CRYPTO_EMOJIS[crypto]
-    return f'<tg-emoji emoji-id="{eid}">🪙</tg-emoji>'
+def build_keyboard():
+    """
+    Har bir button uchun icon_custom_emoji_id ishlatiladi.
+    Bot API 9.4+ va bot egasida Telegram Premium bo'lishi kerak.
+    """
+    keyboard = []
+    for crypto in CRYPTOS:
+        keyboard.append([InlineKeyboardButton(
+            text=f"{crypto}",
+            callback_data=f"crypto_{crypto}",
+            icon_custom_emoji_id=CRYPTO_EMOJIS[crypto]
+        )])
+    return InlineKeyboardMarkup(keyboard)
 
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = []
-    for crypto in CRYPTOS:
-        btn = InlineKeyboardButton(
-            text=f"{crypto}",
-            callback_data=f"crypto_{crypto}",
-            icon_custom_emoji_id=CRYPTO_EMOJIS[crypto]
-        )
-        keyboard.append([btn])
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
+    keyboard = build_keyboard()
     await update.message.reply_text(
-        "💰 <b>Crypto To'lov Tizimi</b>\n\n"
-        "Qaysi crypto orqali to'lov qilmoqchisiz?\n"
-        "Tanlang 👇",
-        reply_markup=reply_markup,
-        parse_mode="HTML"
+        "💰 Crypto To'lov Tizimi\n\nQaysi crypto orqali to'lov qilmoqchisiz? Tanlang 👇",
+        reply_markup=keyboard,
     )
 
 
@@ -82,46 +76,33 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     crypto = query.data.replace("crypto_", "")
     address = crypto_addresses.get(crypto, "")
 
-    emoji_tag = custom_emoji(crypto)
+    back_keyboard = [[InlineKeyboardButton(
+        "Orqaga",
+        callback_data="back_start",
+    )]]
 
     if not address:
         await query.edit_message_text(
-            f"{emoji_tag} <b>{crypto}</b> adresi hali sozlanmagan.\n\n"
-            "Admin tez orada qo'shadi!",
-            parse_mode="HTML"
+            f"{crypto} adresi hali sozlanmagan.\n\nAdmin tez orada qo'shadi!",
+            reply_markup=InlineKeyboardMarkup(back_keyboard),
         )
         return
 
-    keyboard = [[InlineKeyboardButton("🔙 Orqaga", callback_data="back_start")]]
     await query.edit_message_text(
-        f"{emoji_tag} <b>{crypto} Adres:</b>\n\n"
-        f"<code>{address}</code>\n\n"
-        "Yuqoridagi adresga to'lovingizni yuboring. ✅",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML"
+        f"{crypto} Adresi:\n\n{address}\n\nYuqoridagi adresga to'lovingizni yuboring. ✅",
+        reply_markup=InlineKeyboardMarkup(back_keyboard),
     )
 
 
-# ==================== Orqaga qaytish ====================
+# ==================== Orqaga ====================
 async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    keyboard = []
-    for crypto in CRYPTOS:
-        btn = InlineKeyboardButton(
-            text=f"{crypto}",
-            callback_data=f"crypto_{crypto}",
-            icon_custom_emoji_id=CRYPTO_EMOJIS[crypto]
-        )
-        keyboard.append([btn])
-
+    keyboard = build_keyboard()
     await query.edit_message_text(
-        "💰 <b>Crypto To'lov Tizimi</b>\n\n"
-        "Qaysi crypto orqali to'lov qilmoqchisiz?\n"
-        "Tanlang 👇",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML"
+        "💰 Crypto To'lov Tizimi\n\nQaysi crypto orqali to'lov qilmoqchisiz? Tanlang 👇",
+        reply_markup=keyboard,
     )
 
 
@@ -136,24 +117,18 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for crypto in CRYPTOS:
         addr = crypto_addresses[crypto]
         status = "✅" if addr else "❌"
-        keyboard.append([
-            InlineKeyboardButton(
-                f"{status} {crypto} adresini o'zgartir",
-                callback_data=f"admin_edit_{crypto}"
-            )
-        ])
+        keyboard.append([InlineKeyboardButton(
+            f"{status} {crypto} adresini o'zgartir",
+            callback_data=f"admin_edit_{crypto}"
+        )])
 
     await update.message.reply_text(
-        "⚙️ <b>Admin Panel</b>\n\n"
-        "✅ = adres kiritilgan\n"
-        "❌ = adres kiritilmagan\n\n"
-        "O'zgartirmoqchi bo'lgan cryptoni tanlang:",
+        "⚙️ Admin Panel\n\n✅ = adres kiritilgan\n❌ = adres kiritilmagan\n\nO'zgartirmoqchi bo'lgan cryptoni tanlang:",
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="HTML"
     )
 
 
-# ==================== Admin edit tanlash ====================
+# ==================== Admin edit ====================
 async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
@@ -167,21 +142,18 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     admin_edit_target[user_id] = crypto
 
     current = crypto_addresses[crypto]
-    current_text = f"\nHozirgi adres: <code>{current}</code>" if current else "\nHozirgi adres: <i>kiritilmagan</i>"
+    current_text = f"\nHozirgi adres: {current}" if current else "\nHozirgi adres: kiritilmagan"
 
     await query.edit_message_text(
-        f"✏️ <b>{crypto}</b> uchun yangi adresni yuboring:{current_text}\n\n"
-        "Bekor qilish uchun /cancel yozing.",
-        parse_mode="HTML"
+        f"✏️ {crypto} uchun yangi adresni yuboring:{current_text}\n\nBekor qilish: /cancel"
     )
 
     return WAITING_ADDRESS
 
 
-# ==================== Yangi adres qabul qilish ====================
+# ==================== Adres qabul ====================
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-
     if not is_admin(user_id):
         return
 
@@ -194,10 +166,7 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del admin_edit_target[user_id]
 
     await update.message.reply_text(
-        f"✅ <b>{crypto}</b> adresi muvaffaqiyatli yangilandi!\n\n"
-        f"Yangi adres: <code>{new_address}</code>\n\n"
-        "Admin panelga qaytish: /admin",
-        parse_mode="HTML"
+        f"✅ {crypto} adresi yangilandi!\n\nYangi adres: {new_address}\n\n/admin — panel\n/start — bosh sahifa"
     )
 
     return ConversationHandler.END
@@ -208,7 +177,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id in admin_edit_target:
         del admin_edit_target[user_id]
-    await update.message.reply_text("❌ Bekor qilindi. /admin — panel, /start — bosh sahifa.")
+    await update.message.reply_text("❌ Bekor qilindi.")
     return ConversationHandler.END
 
 
@@ -216,7 +185,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # Admin conversation
     conv_handler = ConversationHandler(
         entry_points=[CallbackQueryHandler(admin_edit_callback, pattern="^admin_edit_")],
         states={
