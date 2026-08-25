@@ -44,15 +44,19 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (DOIM FOIZ BILAN) ====================
+# ==================== PROGRESS BAR (DOIM BIR XIL UZUNLIKDA) ====================
 def create_progress(percent: int):
-    """Progress barni chapga, foizni o'ngga qo'yish - 100% da ham foiz qoladi"""
+    """Progress bar doim 24 belgi - 20 belgi progress + 4 belgi foiz"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
     
-    # Progress bar + foiz (100% da ham foiz qoladi)
-    return f"{progress_bar} {percent}%"
+    # Foizni doim 4 ta belgi qilib formatlash (chapga tekislab)
+    # "   0%", "  10%", "  50%", " 100%"
+    percent_text = f"{percent:>4}%"
+    
+    # Progress bar + foiz (doim 24 belgi)
+    return f"{progress_bar}{percent_text}"
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -85,7 +89,6 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    # 100% da ham foiz qoladi
     progress = create_progress(100)
     
     await msg.edit_text(
