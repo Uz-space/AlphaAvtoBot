@@ -54,47 +54,51 @@ def build_keyboard():
 
 # ==================== STREAMING FUNKSIYASI ====================
 async def stream_message(update: Update, text: str, parse_mode: str = "Markdown"):
-    """
-    Matnni asta-sekin terib chiqaradigan funksiya
-    """
-    # "Yozmoqda..." indikatorini yoqish
-    await update.message.chat.send_action(action="typing")
-    
-    # Xabarni bo'laklarga ajratish (har 3 belgidan)
-    chunk_size = 3
-    message = None
-    current_text = ""
-    
-    for i in range(0, len(text), chunk_size):
-        current_text += text[i:i+chunk_size]
+    """Matnni asta-sekin terib chiqaradigan funksiya"""
+    try:
+        # "Yozmoqda..." indikatorini yoqish
+        await update.message.chat.send_action(action="typing")
         
-        if message is None:
-            # Birinchi xabarni yuborish
-            message = await update.message.reply_text(
-                current_text + "▌",  # Kursor effekti
-                parse_mode=parse_mode
-            )
-        else:
-            # Xabarni yangilash
-            try:
-                await message.edit_text(
+        # Xabarni bo'laklarga ajratish (har 3 belgidan)
+        chunk_size = 3
+        message = None
+        current_text = ""
+        
+        for i in range(0, len(text), chunk_size):
+            current_text += text[i:i+chunk_size]
+            
+            if message is None:
+                # Birinchi xabarni yuborish
+                message = await update.message.reply_text(
                     current_text + "▌",
                     parse_mode=parse_mode
                 )
-            except:
-                pass
+            else:
+                # Xabarni yangilash
+                try:
+                    await message.edit_text(
+                        current_text + "▌",
+                        parse_mode=parse_mode
+                    )
+                except Exception as e:
+                    logging.error(f"Edit error: {e}")
+                    pass
+            
+            # Har bir bo'lak orasida biroz kutish
+            await asyncio.sleep(0.15)
         
-        # Har bir bo'lak orasida biroz kutish (realistik effekt)
-        await asyncio.sleep(0.15)
-    
-    # Yakuniy xabarni kursorsiz jo'natish
-    if message:
-        await message.edit_text(
-            current_text,
-            parse_mode=parse_mode
-        )
-    
-    return message
+        # Yakuniy xabarni kursorsiz jo'natish
+        if message:
+            await message.edit_text(
+                current_text,
+                parse_mode=parse_mode
+            )
+        
+        return message
+    except Exception as e:
+        logging.error(f"Stream error: {e}")
+        # Agar streaming ishlamasa, oddiy xabar yuborish
+        await update.message.reply_text(text, parse_mode=parse_mode)
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -189,36 +193,42 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     cancel_keyboard = [[InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_action", style="danger")]]
 
     await query.edit_message_text(
-        f"✏️ **{crypto}** uchun yangi hamyon manzilini (adres) yuboring:{current_text}",
+        f"✏️ **{crypto}** uchun yangi hamyon manzilini (adres) yuboring:{current_text}\n\n⏳ Adresni yozing va yuboring:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(cancel_keyboard)
     )
     return WAITING_ADDRESS
 
-# ==================== Adres qabul qilish (STREAMING BILAN) ====================
+# ==================== Adres qabul qilish (FIXED) ====================
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    
+    # Admin tekshiruvi
     if not is_admin(user_id):
-        return
-
+        await update.message.reply_text("❌ Siz admin emassiz!")
+        return ConversationHandler.END
+    
+    # Crypto ni olish
     crypto = admin_edit_target.get(user_id)
     if not crypto:
-        return
+        await update.message.reply_text("❌ Xatolik! Iltimos, /admin dan qayta urinib ko'ring.")
+        return ConversationHandler.END
 
+    # Adresni olish
     new_address = update.message.text.strip()
+    
+    # Adresni saqlash
     crypto_addresses[crypto] = new_address
     del admin_edit_target[user_id]
-
-    # Streaming matn - asta-sekin ko'rinadi
-    stream_text = (
+    
+    # ✅ JAVOB YUBORISH (fix)
+    await update.message.reply_text(
         f"✅ **{crypto}** hamyon manzili muvaffaqiyatli o'zgartirildi!\n\n"
         f"Yangi manzil: `{new_address}`\n\n"
         f"/admin — Panelga qaytish\n"
-        f"/start — Botni ko'rish"
+        f"/start — Botni ko'rish",
+        parse_mode="Markdown"
     )
-    
-    # Streaming orqali yuborish
-    await stream_message(update, stream_text)
     
     return ConversationHandler.END
 
@@ -237,7 +247,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     return ConversationHandler.END
 
-# ==================== ADMIN STATISTIKA (YANGI) ====================
+# ==================== ADMIN STATISTIKA ====================
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not is_admin(user_id):
@@ -255,8 +265,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔢 Foiz: {int(filled/total*100)}%"
     )
     
-    # Streaming orqali statistikani ham chiroyli ko'rsatish
-    await stream_message(update, stats_text)
+    await update.message.reply_text(stats_text, parse_mode="Markdown")
 
 # ==================== MAIN START ====================
 def main():
@@ -275,13 +284,13 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin_panel))
-    app.add_handler(CommandHandler("stats", admin_stats))  # YANGI! /stats buyrug'i
+    app.add_handler(CommandHandler("stats", admin_stats))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(conv_handler)
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
 
-    print("🤖 Streaming + Stats funksiyalari qo'shilgan bot ishga tushdi...")
+    print("🤮 Bot ishga tushdi...")
     app.run_polling()
 
 if __name__ == "__main__":
