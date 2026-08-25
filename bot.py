@@ -44,27 +44,28 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (TO'G'RI) ====================
+# ==================== PROGRESS BAR (TO'G'RI 22 BELGI) ====================
 def create_progress(percent: int):
-    """Progress barni to'g'ri chiziqlar bilan"""
+    """Progress barni to'g'ri chiziqlar bilan - 22 belgi"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
     
-    # Matnni markazga (20 belgi ichida)
+    # Matnni markazga (22 belgi ichida)
     text = f"{percent:3}%"
-    text_padding = (20 - len(text)) // 2
-    centered_text = " " * text_padding + text + " " * (20 - len(text) - text_padding)
+    padding = (22 - len(text)) // 2
+    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
     
     return f"│{centered_text}│\n│{progress_bar}│"
 
 def create_done():
-    """Tugallangan holat"""
-    # Matnni markazga (20 belgi ichida)
+    """Tugallangan holat - 22 belgi"""
+    # Matnni markazga (22 belgi ichida)
     text = "✅ 100%"
-    text_padding = (20 - len(text)) // 2
-    centered_text = " " * text_padding + text + " " * (20 - len(text) - text_padding)
+    padding = (22 - len(text)) // 2
+    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
     
+    # Progress bar 20 belgi
     progress_bar = "▓" * 20
     
     return f"│{centered_text}│\n│{progress_bar}│"
