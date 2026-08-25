@@ -44,25 +44,26 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (MONOSPACE + CHEGARALAR) ====================
+# ==================== PROGRESS BAR (TO'G'RI) ====================
 def create_progress(percent: int):
-    """Progress barni monospace va chegaralar bilan"""
+    """Progress barni to'g'ri chiziqlar bilan"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
     
-    # Markazga joylashtirish
+    # Matnni markazga (20 belgi ichida)
     text = f"{percent:3}%"
-    padding = (22 - len(text)) // 2
-    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
+    text_padding = (20 - len(text)) // 2
+    centered_text = " " * text_padding + text + " " * (20 - len(text) - text_padding)
     
     return f"│{centered_text}│\n│{progress_bar}│"
 
 def create_done():
     """Tugallangan holat"""
+    # Matnni markazga (20 belgi ichida)
     text = "✅ 100%"
-    padding = (22 - len(text)) // 2
-    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
+    text_padding = (20 - len(text)) // 2
+    centered_text = " " * text_padding + text + " " * (20 - len(text) - text_padding)
     
     progress_bar = "▓" * 20
     
