@@ -154,9 +154,8 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     if address:
-        # Manzil bor - emoji va manzil bir qatorda, nusxalash tugmasi bilan
+        # Manzil bor - emoji va manzil monospacedda, faqat bosh sahifa tugmasi
         keyboard = [[
-            InlineKeyboardButton("📋 Nusxalash", callback_data=f"copy_{crypto}", style="primary"),
             InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
         ]]
         
@@ -173,38 +172,6 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await query.edit_message_text(
             f"{emoji} Manzil yo'q",
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-
-# ==================== COPY CALLBACK ====================
-async def copy_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    crypto = query.data.replace("copy_", "")
-    address = crypto_addresses.get(crypto, "")
-    info = CRYPTO_DATA.get(crypto, {})
-    emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
-    
-    if address:
-        # Nusxalash uchun xabar yuboramiz (foydalanuvchi o'zi nusxalaydi)
-        await query.edit_message_text(
-            f"{emoji} <code>{address}</code>\n\n"
-            f"✅ Manzil nusxalandi!",
-            parse_mode="HTML"
-        )
-        
-        # 2 sekunddan keyin avvalgi holatga qaytaramiz
-        await asyncio.sleep(2)
-        
-        keyboard = [[
-            InlineKeyboardButton("📋 Nusxalash", callback_data=f"copy_{crypto}", style="primary"),
-            InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-        ]]
-        
-        await query.edit_message_text(
-            f"{emoji} <code>{address}</code>",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -353,7 +320,6 @@ def main():
     app.add_handler(conv_handler)
     
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
-    app.add_handler(CallbackQueryHandler(copy_address, pattern="^copy_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
     app.add_handler(CallbackQueryHandler(show_prices, pattern="^prices$"))
     app.add_handler(CallbackQueryHandler(show_help, pattern="^help$"))
