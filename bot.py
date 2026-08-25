@@ -174,9 +174,9 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await query.edit_message_text("⏳")
     keyboard = await show_crypto_with_progress(update, context, msg)
     
-    # Progress bar tugagach, faqat tugmalarni qoldiramiz
+    # Progress bar tugagach, faqat tugmalarni qoldiramiz (bo'sh matn o'rniga nuqta qo'yamiz)
     await msg.edit_text(
-        "",
+        ".",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -228,7 +228,7 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = get_main_keyboard()
     
     await query.edit_message_text(
-        "",
+        ".",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
