@@ -51,6 +51,15 @@ crypto_addresses = load_addresses()
 WAITING_ADDRESS = 1
 admin_edit_target = {}
 
+# ==================== TILLAR ====================
+LANGUAGES = {
+    "en": {"name": "English", "flag": "🇬🇧", "choose": "Choose language:"},
+    "ru": {"name": "Русский", "flag": "🇷🇺", "choose": "Выберите язык:"},
+    "uz": {"name": "O'zbekcha", "flag": "🇺🇿", "choose": "Tilni tanlang:"}
+}
+
+user_language = {}
+
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
@@ -65,102 +74,67 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR ====================
-def create_progress(percent: int):
-    filled = int(percent / 100 * 20)
-    empty = 20 - filled
-    progress_bar = "▓" * filled + "░" * empty
-    percent_text = f"{percent:>4}%"
-    return f"{progress_bar}{percent_text}"
-
-# ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
-async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳", parse_mode="Markdown")
+# ==================== TIL TANLASH ====================
+async def language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [
+            InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"),
+            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru"),
+            InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="lang_uz")
+        ]
+    ]
     
-    crypto_list = list(CRYPTO_DATA.items())
-    keyboard = []
-    
-    for i, (code, info) in enumerate(crypto_list):
-        await asyncio.sleep(0.4)
-        button = create_premium_button(code, info)
-        keyboard.append([button])
-        percent = int((i + 1) / len(crypto_list) * 100)
-        progress = create_progress(percent)
-        await msg.edit_text(
-            f"```\n{progress}\n```",
-            parse_mode="Markdown",
+    # /start dan kelgan bo'lsa
+    if update.message:
+        await update.message.reply_text(
+            "🌍 Choose language:\n\n"
+            "🌍 Выберите язык:\n\n"
+            "🌍 Tilni tanlang:",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+    # Callback query dan kelgan bo'lsa
+    elif update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        await query.edit_message_text(
+            "🌍 Choose language:\n\n"
+            "🌍 Выберите язык:\n\n"
+            "🌍 Tilni tanlang:",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+# ==================== TIL TANLANGANDA ====================
+async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
     
-    await asyncio.sleep(0.3)
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
+    lang_code = query.data.replace("lang_", "")
+    user_id = query.from_user.id
     
-    progress = create_progress(100)
-    await msg.edit_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+    user_language[user_id] = lang_code
+    
+    # Tanlangan tilni ko'rsatish
+    lang_info = LANGUAGES[lang_code]
+    
+    await query.edit_message_text(
+        f"{lang_info['flag']} {lang_info['name']} tanlandi! ✅\n\n"
+        f"📊 Kriptovalyutalarni ko'rish uchun quyidagi tugmalardan foydalaning:",
+        reply_markup=InlineKeyboardMarkup(get_main_keyboard(lang_code))
     )
+
+# ==================== ASOSIY KEYBOARD ====================
+def get_main_keyboard(lang_code: str):
+    keyboard = []
+    
+    for code, info in CRYPTO_DATA.items():
+        button = create_premium_button(code, info)
+        keyboard.append([button])
+    
+    return keyboard
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await show_crypto_one_by_one(update, context)
-
-# ==================== QOLGAN FUNKSIYALAR ====================
-async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    prices = {
-        "BTC": "$67,500",
-        "ETH": "$3,200", 
-        "BNB": "$550",
-        "SOL": "$145",
-        "LTC": "$85",
-        "TON": "$6.50",
-        "TRX": "$0.12",
-        "DOGE": "$0.15"
-    }
-    
-    text = "📊 **Kurslar**\n\n"
-    for code, price in prices.items():
-        info = CRYPTO_DATA[code]
-        text += f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji> <b>{code}</b>: {price}\n'
-    
-    keyboard = [[
-        InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-    ]]
-    
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    text = (
-        "❓ <b>Yordam</b>\n\n"
-        "1️⃣ Kriptovalyutani tanlang\n"
-        "2️⃣ Manzilni nusxalang\n"
-        "3️⃣ To'lovni yuboring"
-    )
-    
-    keyboard = [[
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-    ]]
-    
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
+    await language_selection(update, context)
 
 # ==================== CRYPTO CALLBACK - HTML FORMAT ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -198,23 +172,12 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    crypto_list = list(CRYPTO_DATA.items())
-    keyboard = []
+    user_id = query.from_user.id
+    lang_code = user_language.get(user_id, "uz")
     
-    for code, info in crypto_list:
-        button = create_premium_button(code, info)
-        keyboard.append([button])
-    
-    keyboard.append([
-        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
-        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
-    ])
-    
-    progress = create_progress(100)
     await query.edit_message_text(
-        f"```\n{progress}\n```",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        f"📊 Kriptovalyutalarni ko'rish uchun quyidagi tugmalardan foydalaning:",
+        reply_markup=InlineKeyboardMarkup(get_main_keyboard(lang_code))
     )
 
 # ==================== ADMIN ====================
@@ -341,10 +304,9 @@ def main():
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(conv_handler)
     
+    app.add_handler(CallbackQueryHandler(set_language, pattern="^lang_"))
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
-    app.add_handler(CallbackQueryHandler(show_prices, pattern="^prices$"))
-    app.add_handler(CallbackQueryHandler(show_help, pattern="^help$"))
 
     print("🤖 Bot ishga tushdi!")
     app.run_polling()
