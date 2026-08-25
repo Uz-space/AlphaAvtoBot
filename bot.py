@@ -63,6 +63,33 @@ user_language = {}
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
+# ==================== TILGA MOS MATNLAR ====================
+def get_texts(lang_code: str):
+    if lang_code == "en":
+        return {
+            "select_crypto": "Select a cryptocurrency:",
+            "no_address": "No address",
+            "back_home": "🏠 Home",
+            "address_updated": "address updated!",
+            "copy_address": "📋 Copy address"
+        }
+    elif lang_code == "ru":
+        return {
+            "select_crypto": "Выберите криптовалюту:",
+            "no_address": "Адрес отсутствует",
+            "back_home": "🏠 Главная",
+            "address_updated": "адрес обновлен!",
+            "copy_address": "📋 Копировать адрес"
+        }
+    else:  # uz
+        return {
+            "select_crypto": "Kriptovalyutani tanlang:",
+            "no_address": "Manzil yo'q",
+            "back_home": "🏠 Bosh sahifa",
+            "address_updated": "manzili o'zgartirildi!",
+            "copy_address": "📋 Nusxalash"
+        }
+
 # ==================== TUGMA YARATISH ====================
 def create_premium_button(code: str, info: dict):
     text = f"{info['name']} ({code})"
@@ -113,14 +140,15 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Tanlangan tilni ko'rsatish
     lang_info = LANGUAGES[lang_code]
+    texts = get_texts(lang_code)
     
     # Tilga mos xabar
     if lang_code == "en":
-        msg = f"{lang_info['flag']} {lang_info['name']} selected! ✅\n\nSelect a cryptocurrency:"
+        msg = f"{lang_info['flag']} {lang_info['name']} selected! ✅\n\n{texts['select_crypto']}"
     elif lang_code == "ru":
-        msg = f"{lang_info['flag']} {lang_info['name']} выбран! ✅\n\nВыберите криптовалюту:"
+        msg = f"{lang_info['flag']} {lang_info['name']} выбран! ✅\n\n{texts['select_crypto']}"
     else:
-        msg = f"{lang_info['flag']} {lang_info['name']} tanlandi! ✅\n\nKriptovalyutani tanlang:"
+        msg = f"{lang_info['flag']} {lang_info['name']} tanlandi! ✅\n\n{texts['select_crypto']}"
     
     await query.edit_message_text(
         msg,
@@ -149,12 +177,16 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     crypto = query.data.replace("crypto_", "")
     address = crypto_addresses.get(crypto, "")
     info = CRYPTO_DATA.get(crypto, {})
+    
+    user_id = query.from_user.id
+    lang_code = user_language.get(user_id, "uz")
+    texts = get_texts(lang_code)
 
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     if address:
         keyboard = [[
-            InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
+            InlineKeyboardButton(texts['back_home'], callback_data="back_start", style="primary")
         ]]
         
         await query.edit_message_text(
@@ -164,11 +196,11 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         keyboard = [[
-            InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
+            InlineKeyboardButton(texts['back_home'], callback_data="back_start", style="primary")
         ]]
         
         await query.edit_message_text(
-            f"{emoji} Manzil yo'q",
+            f"{emoji} {texts['no_address']}",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -179,17 +211,10 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_id = query.from_user.id
     lang_code = user_language.get(user_id, "uz")
-    
-    # Tilga mos xabar
-    if lang_code == "en":
-        msg = "Select a cryptocurrency:"
-    elif lang_code == "ru":
-        msg = "Выберите криптовалюту:"
-    else:
-        msg = "Kriptovalyutani tanlang:"
+    texts = get_texts(lang_code)
     
     await query.edit_message_text(
-        msg,
+        texts['select_crypto'],
         reply_markup=InlineKeyboardMarkup(get_main_keyboard())
     )
 
