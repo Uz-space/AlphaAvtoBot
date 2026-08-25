@@ -6,8 +6,8 @@ from telegram.ext import (
 )
 
 # ===================== TOKEN =====================
-BOT_TOKEN = "BU YERGA BOT TOKENINGIZNI YOZING"
-ADMIN_IDS = [123456789]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING
+BOT_TOKEN = "8768572368:AAF20AL0KGW8AziA9WsPx4XHZDAJjB6zZys"
+ADMIN_IDS = []  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING
 # =================================================
 
 logging.basicConfig(level=logging.INFO)
