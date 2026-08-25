@@ -160,10 +160,9 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="HTML"
         )
     else:
-        # Manzil yo'q - emoji bilan chiqaramiz
+        # Faqat EMOJI va "Manzil yo'q" - bir qatorda
         await query.edit_message_text(
-            f"{emoji} {info['name']} ({crypto})\n\n"
-            f"❌ Manzil yo'q",
+            f"{emoji} Manzil yo'q",
             parse_mode="HTML"
         )
 
@@ -200,9 +199,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for crypto, info in CRYPTO_DATA.items():
         addr = crypto_addresses[crypto]
-        
-        # Emoji bilan chiqaramiz
-        emoji_text = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
         
         if addr:
             btn_text = f"✅ {crypto} - yangilash"
