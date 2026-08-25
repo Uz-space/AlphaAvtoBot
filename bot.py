@@ -44,19 +44,15 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (MATN ICHIDA) ====================
+# ==================== PROGRESS BAR (CHAPDA PROGRESS, O'NGDA FOIZ) ====================
 def create_progress(percent: int):
-    """Progress bar ichida matn"""
+    """Progress barni chapga, foizni o'ngga qo'yish"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
-    
-    # Agar 100% bo'lsa
-    if percent == 100:
-        return "▓" * 20
-    
-    # Progress bar + matn
     progress_bar = "▓" * filled + "░" * empty
-    return progress_bar
+    
+    # Progress bar + foiz
+    return f"{progress_bar} {percent}%"
 
 def create_done():
     """Tugallangan holat - faqat progress bar"""
@@ -81,18 +77,11 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         percent = int((i + 1) / len(crypto_list) * 100)
         progress = create_progress(percent)
         
-        if percent == 100:
-            await msg.edit_text(
-                f"💳 **Kripto To'lov**\n\n```\n{progress}\n```",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
-        else:
-            await msg.edit_text(
-                f"💳 **Kripto To'lov**\n\n{percent}%\n```\n{progress}\n```",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard)
-            )
+        await msg.edit_text(
+            f"```\n{progress}\n```",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
     
     await asyncio.sleep(0.3)
     keyboard.append([
@@ -103,7 +92,7 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
     progress = create_done()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
+        f"```\n{progress}\n```",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -137,18 +126,11 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
             percent = int(index / len(crypto_list) * 100)
             progress = create_progress(percent)
             
-            if percent == 100:
-                await msg.edit_text(
-                    f"💳 **Kripto To'lov**\n\n```\n{progress}\n```",
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-            else:
-                await msg.edit_text(
-                    f"💳 **Kripto To'lov**\n\n{percent}%\n```\n{progress}\n```",
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
+            await msg.edit_text(
+                f"```\n{progress}\n```",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
     
     await asyncio.sleep(0.3)
     keyboard.append([
@@ -159,7 +141,7 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     progress = create_done()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
+        f"```\n{progress}\n```",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -188,18 +170,11 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
             percent = int((i + 1) / len(crypto_list) * 100)
             progress = create_progress(percent)
             
-            if percent == 100:
-                await msg.edit_text(
-                    f"💳 **Kripto To'lov**\n\n```\n{progress}\n```",
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-            else:
-                await msg.edit_text(
-                    f"💳 **Kripto To'lov**\n\n{percent}%\n```\n{progress}\n```",
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
+            await msg.edit_text(
+                f"```\n{progress}\n```",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
     
     if row:
         keyboard.append(row)
@@ -213,7 +188,7 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
     progress = create_done()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
+        f"```\n{progress}\n```",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -323,7 +298,7 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     progress = create_done()
     
     await query.edit_message_text(
-        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
+        f"```\n{progress}\n```",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
