@@ -44,9 +44,9 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== TABLE PROGRESS BAR (MARKAZDA) ====================
+# ==================== TABLE PROGRESS BAR (TO'LIQ MARKAZDA) ====================
 def create_progress_table(percent: int):
-    """Progress barni table ichida markazda ko'rsatish"""
+    """Progress barni table ichida to'liq markazda ko'rsatish"""
     
     # Progress bar uzunligi: 20 belgi
     filled = int(percent / 100 * 20)
@@ -55,33 +55,41 @@ def create_progress_table(percent: int):
     # Progress bar (20 belgi)
     progress_bar = "▓" * filled + "░" * empty
     
-    # Matnni markazga joylashtirish
-    # "Yuklanmoqda" so'zini markazga
+    # Matnni markazga joylashtirish (22 belgidan iborat qator)
     text = f"{percent:3}% Yuklanmoqda"
-    text_padding = (22 - len(text)) // 2  # 22 - qator uzunligi
+    # Markazga joylashtirish
+    text_padding = (22 - len(text)) // 2
     centered_text = " " * text_padding + text + " " * (22 - len(text) - text_padding)
     
-    # TABLE - hamma qatorlar bir xil uzunlikda
+    # Progress barni markazga joylashtirish (22 belgidan iborat qator)
+    # 22 - 20 = 2, shuning uchun 1 tadan bo'shliq
+    progress_padding = (22 - 20) // 2
+    centered_progress = " " * progress_padding + progress_bar + " " * (22 - 20 - progress_padding)
+    
+    # TABLE
     table = f"┌──────────────────────┐\n"
     table += f"│{centered_text}│\n"
-    table += f"│  {progress_bar}  │\n"  # Chapda 2, o'ngda 2 bo'shliq
+    table += f"│{centered_progress}│\n"
     table += f"└──────────────────────┘"
     
     return table
 
 def create_done_table():
-    """Tugallangan holat - markazda"""
+    """Tugallangan holat - to'liq markazda"""
     
-    # "✅ TAYYOR" ni markazga
-    text = "✅ TAYYOR  100%"
+    # "✅ TAYYOR 100%" ni markazga
+    text = "✅ TAYYOR 100%"
     text_padding = (22 - len(text)) // 2
     centered_text = " " * text_padding + text + " " * (22 - len(text) - text_padding)
     
+    # Progress barni markazga
     progress_bar = "▓" * 20
+    progress_padding = (22 - 20) // 2
+    centered_progress = " " * progress_padding + progress_bar + " " * (22 - 20 - progress_padding)
     
     table = f"┌──────────────────────┐\n"
     table += f"│{centered_text}│\n"
-    table += f"│  {progress_bar}  │\n"
+    table += f"│{centered_progress}│\n"
     table += f"└──────────────────────┘"
     
     return table
