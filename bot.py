@@ -44,31 +44,46 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== TABLE PROGRESS BAR (TO'G'RILANGAN) ====================
-def create_progress_table(percent: int, total: int = 8):
-    """Progress barni table ichida to'g'ri ko'rsatish"""
+# ==================== TABLE PROGRESS BAR (MARKAZDA) ====================
+def create_progress_table(percent: int):
+    """Progress barni table ichida markazda ko'rsatish"""
     
-    # Progress barni hisoblash (20 belgidan iborat)
+    # Progress bar uzunligi: 20 belgi
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     
     # Progress bar (20 belgi)
     progress_bar = "▓" * filled + "░" * empty
     
-    # TABLE - har bir qator uzunligi 24 belgi (┌─┐, └─┘, │ │)
+    # Matnni markazga joylashtirish
+    # "Yuklanmoqda" so'zini markazga
+    text = f"{percent:3}% Yuklanmoqda"
+    text_padding = (22 - len(text)) // 2  # 22 - qator uzunligi
+    centered_text = " " * text_padding + text + " " * (22 - len(text) - text_padding)
+    
+    # TABLE - hamma qatorlar bir xil uzunlikda
     table = f"┌──────────────────────┐\n"
-    table += f"│  {percent:3}%  Yuklanmoqda      │\n"
-    table += f"│  {progress_bar}  │\n"
+    table += f"│{centered_text}│\n"
+    table += f"│  {progress_bar}  │\n"  # Chapda 2, o'ngda 2 bo'shliq
     table += f"└──────────────────────┘"
     
     return table
 
 def create_done_table():
-    """Tugallangan holat"""
+    """Tugallangan holat - markazda"""
+    
+    # "✅ TAYYOR" ni markazga
+    text = "✅ TAYYOR  100%"
+    text_padding = (22 - len(text)) // 2
+    centered_text = " " * text_padding + text + " " * (22 - len(text) - text_padding)
+    
+    progress_bar = "▓" * 20
+    
     table = f"┌──────────────────────┐\n"
-    table += f"│  ✅ TAYYOR  100%      │\n"
-    table += f"│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  │\n"
+    table += f"│{centered_text}│\n"
+    table += f"│  {progress_bar}  │\n"
     table += f"└──────────────────────┘"
+    
     return table
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
@@ -208,16 +223,7 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 3 xil usul:
-    
-    # 1-usul: Har biri alohida (default)
     await show_crypto_one_by_one(update, context)
-    
-    # 2-usul: 1-2-3-2 format
-    # await show_crypto_fancy(update, context)
-    
-    # 3-usul: 2 tadan
-    # await show_crypto_two_by_two(update, context)
 
 # ==================== QOLGAN FUNKSIYALAR ====================
 async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
