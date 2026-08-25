@@ -57,18 +57,47 @@ def create_progress(percent: int):
     percent_text = f"{percent:>4}%"
     return f"{progress_bar}{percent_text}"
 
-# ==================== TUGMALARNI KO'RSATISH ====================
-async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ==================== ASOSIY MENYU ====================
+async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Asosiy menyuni ko'rsatish"""
+    crypto_list = list(CRYPTO_DATA.items())
+    keyboard = []
+    
+    for code, info in crypto_list:
+        button = create_premium_button(code, info)
+        keyboard.append([button])
+    
+    keyboard.append([
+        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
+        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
+    ])
+    
+    progress = create_progress(100)
+    text = f"<pre>{progress}</pre>"
+    
     # Agar callback_query dan kelgan bo'lsa
     if update.callback_query:
         query = update.callback_query
         await query.answer()
-        msg = query.message
-    else:
-        msg = await update.message.reply_text(
-            "⏳",
-            parse_mode="HTML"
+        await query.edit_message_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
+    else:
+        await update.message.reply_text(
+            text,
+            parse_mode="HTML",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+# ==================== TUGMALARNI KO'RSATISH (ANIMATION) ====================
+async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Tugmalarni birma-bir ko'rsatish"""
+    msg = await update.message.reply_text(
+        "⏳",
+        parse_mode="HTML"
+    )
     
     crypto_list = list(CRYPTO_DATA.items())
     keyboard = []
@@ -103,15 +132,11 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
     )
 
 async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        query = update.callback_query
-        await query.answer()
-        msg = query.message
-    else:
-        msg = await update.message.reply_text(
-            "⏳",
-            parse_mode="HTML"
-        )
+    """Tugmalarni 1-2-3-2 formatda ko'rsatish"""
+    msg = await update.message.reply_text(
+        "⏳",
+        parse_mode="HTML"
+    )
     
     crypto_list = list(CRYPTO_DATA.items())
     layout = [1, 2, 3, 2]
@@ -156,15 +181,11 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.callback_query:
-        query = update.callback_query
-        await query.answer()
-        msg = query.message
-    else:
-        msg = await update.message.reply_text(
-            "⏳",
-            parse_mode="HTML"
-        )
+    """Tugmalarni 2 tadan ko'rsatish"""
+    msg = await update.message.reply_text(
+        "⏳",
+        parse_mode="HTML"
+    )
     
     crypto_list = list(CRYPTO_DATA.items())
     keyboard = []
@@ -208,63 +229,12 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start komandasi"""
     await show_crypto_one_by_one(update, context)
 
-# ==================== QOLGAN FUNKSIYALAR ====================
-async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    prices = {
-        "BTC": "$67,500",
-        "ETH": "$3,200", 
-        "BNB": "$550",
-        "SOL": "$145",
-        "LTC": "$85",
-        "TON": "$6.50",
-        "TRX": "$0.12",
-        "DOGE": "$0.15"
-    }
-    
-    text = "📊 <b>Kurslar</b>\n\n"
-    for code, price in prices.items():
-        info = CRYPTO_DATA[code]
-        emoji = get_emoji_html(info['emoji_id'])
-        text += f"{emoji} <b>{code}:</b> {price}\n"
-    
-    keyboard = [[
-        InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-    ]]
-    
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
-async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    text = (
-        "❓ <b>Yordam</b>\n\n"
-        "1️⃣ Kriptovalyutani tanlang\n"
-        "2️⃣ Manzilni nusxalang\n"
-        "3️⃣ To'lovni yuboring"
-    )
-    
-    keyboard = [[
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")
-    ]]
-    
-    await query.edit_message_text(
-        text,
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard)
-    )
-
+# ==================== CALLBACK HANDLERS ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Kripto tugmasi bosilganda"""
     query = update.callback_query
     await query.answer()
 
@@ -273,7 +243,7 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     info = CRYPTO_DATA.get(crypto, {})
 
     back_keyboard = [[
-        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary"),
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_to_main", style="primary"),
         InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary")
     ]]
 
@@ -296,15 +266,90 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup(back_keyboard),
     )
 
-async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Kurslarni ko'rsatish"""
     query = update.callback_query
     await query.answer()
     
-    # Qaytadan asosiy menyuni ko'rsatish
-    await show_crypto_one_by_one(update, context)
+    prices = {
+        "BTC": "$67,500",
+        "ETH": "$3,200", 
+        "BNB": "$550",
+        "SOL": "$145",
+        "LTC": "$85",
+        "TON": "$6.50",
+        "TRX": "$0.12",
+        "DOGE": "$0.15"
+    }
+    
+    text = "📊 <b>Kurslar</b>\n\n"
+    for code, price in prices.items():
+        info = CRYPTO_DATA[code]
+        emoji = get_emoji_html(info['emoji_id'])
+        text += f"{emoji} <b>{code}:</b> {price}\n"
+    
+    keyboard = [[
+        InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_to_main", style="primary")
+    ]]
+    
+    await query.edit_message_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Yordamni ko'rsatish"""
+    query = update.callback_query
+    await query.answer()
+    
+    text = (
+        "❓ <b>Yordam</b>\n\n"
+        "1️⃣ Kriptovalyutani tanlang\n"
+        "2️⃣ Manzilni nusxalang\n"
+        "3️⃣ To'lovni yuboring"
+    )
+    
+    keyboard = [[
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_to_main", style="primary")
+    ]]
+    
+    await query.edit_message_text(
+        text,
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Bosh sahifaga qaytish"""
+    query = update.callback_query
+    await query.answer()
+    
+    # Asosiy menyuni ko'rsatish
+    crypto_list = list(CRYPTO_DATA.items())
+    keyboard = []
+    
+    for code, info in crypto_list:
+        button = create_premium_button(code, info)
+        keyboard.append([button])
+    
+    keyboard.append([
+        InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
+        InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
+    ])
+    
+    progress = create_progress(100)
+    
+    await query.edit_message_text(
+        f"<pre>{progress}</pre>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
 # ==================== ADMIN ====================
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin panel"""
     user_id = update.effective_user.id
     if not is_admin(user_id):
         await update.message.reply_text("❌ Admin emassiz!")
@@ -335,6 +380,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin manzil o'zgartirish"""
     query = update.callback_query
     user_id = query.from_user.id
 
@@ -361,6 +407,7 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     return WAITING_ADDRESS
 
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin manzil qabul qilish"""
     user_id = update.effective_user.id
     
     if not is_admin(user_id):
@@ -385,6 +432,7 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Bekor qilish"""
     target_user = update.effective_user.id
     if target_user in admin_edit_target:
         del admin_edit_target[target_user]
@@ -418,8 +466,9 @@ def main():
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(conv_handler)
     
+    # Callback handlerlar
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
-    app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
+    app.add_handler(CallbackQueryHandler(back_to_main, pattern="^back_to_main$"))
     app.add_handler(CallbackQueryHandler(show_prices, pattern="^prices$"))
     app.add_handler(CallbackQueryHandler(show_help, pattern="^help$"))
 
