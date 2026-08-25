@@ -154,13 +154,13 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     if address:
+        # Manzil bor - emoji va manzil bir qatorda
         await query.edit_message_text(
-            f"{emoji} {info['name']} ({crypto})\n\n"
-            f"<code>{address}</code>",
+            f"{emoji} {address}",
             parse_mode="HTML"
         )
     else:
-        # Faqat EMOJI va "Manzil yo'q" - bir qatorda
+        # Manzil yo'q - emoji va "Manzil yo'q" bir qatorda
         await query.edit_message_text(
             f"{emoji} Manzil yo'q",
             parse_mode="HTML"
@@ -236,7 +236,7 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     info = CRYPTO_DATA.get(crypto, {})
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
     
-    current_text = f"\nHozirgi: <code>{current}</code>" if current else f"\n{emoji} Hozirgi: yo'q"
+    current_text = f"\n{emoji} Hozirgi: <code>{current}</code>" if current else f"\n{emoji} Hozirgi: yo'q"
 
     cancel_keyboard = [[
         InlineKeyboardButton("❌ Bekor", callback_data="cancel_action", style="danger")
@@ -269,7 +269,7 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(
         f"{emoji} ✅ <b>{crypto}</b> manzili o'zgartirildi!\n\n"
-        f"<code>{new_address}</code>",
+        f"{emoji} {new_address}",
         parse_mode="HTML"
     )
     
