@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
@@ -32,30 +33,68 @@ def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
 def build_keyboard():
-    """
-    Siz so'ragan maxsus ranglar kombinatsiyasi asosida tugmalar yasaladi.
-    """
     keyboard = []
     for code, info in CRYPTO_DATA.items():
-        # Tugma parametrlarini boshlang'ich sozlash
         btn_kwargs = {
             "text": f" {info['name']} ({code})",
             "callback_data": f"crypto_{code}",
             "icon_custom_emoji_id": info['emoji_id']
         }
         
-        # Har bir kriptovalyutaga alohida rang berish sharti
         if code in ["BTC", "ETH"]:
-            btn_kwargs["style"] = "danger"    # 🔴 Qizil tugma
+            btn_kwargs["style"] = "danger"
         elif code in ["BNB", "SOL"]:
-            btn_kwargs["style"] = "success"   # 🟢 Yashil tugma
+            btn_kwargs["style"] = "success"
         elif code in ["LTC", "TON"]:
-            btn_kwargs["style"] = "primary"   # 🔵 Ko'k tugma
-        # TRX va DOGE uchun style yozilmaydi, Telegram o'zining original neytral rangini qoldiradi.
+            btn_kwargs["style"] = "primary"
 
         keyboard.append([InlineKeyboardButton(**btn_kwargs)])
         
     return InlineKeyboardMarkup(keyboard)
+
+# ==================== STREAMING FUNKSIYASI ====================
+async def stream_message(update: Update, text: str, parse_mode: str = "Markdown"):
+    """
+    Matnni asta-sekin terib chiqaradigan funksiya
+    """
+    # "Yozmoqda..." indikatorini yoqish
+    await update.message.chat.send_action(action="typing")
+    
+    # Xabarni bo'laklarga ajratish (har 3 belgidan)
+    chunk_size = 3
+    message = None
+    current_text = ""
+    
+    for i in range(0, len(text), chunk_size):
+        current_text += text[i:i+chunk_size]
+        
+        if message is None:
+            # Birinchi xabarni yuborish
+            message = await update.message.reply_text(
+                current_text + "▌",  # Kursor effekti
+                parse_mode=parse_mode
+            )
+        else:
+            # Xabarni yangilash
+            try:
+                await message.edit_text(
+                    current_text + "▌",
+                    parse_mode=parse_mode
+                )
+            except:
+                pass
+        
+        # Har bir bo'lak orasida biroz kutish (realistik effekt)
+        await asyncio.sleep(0.15)
+    
+    # Yakuniy xabarni kursorsiz jo'natish
+    if message:
+        await message.edit_text(
+            current_text,
+            parse_mode=parse_mode
+        )
+    
+    return message
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,7 +195,7 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     return WAITING_ADDRESS
 
-# ==================== Adres qabul qilish ====================
+# ==================== Adres qabul qilish (STREAMING BILAN) ====================
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not is_admin(user_id):
@@ -170,10 +209,17 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     crypto_addresses[crypto] = new_address
     del admin_edit_target[user_id]
 
-    await update.message.reply_text(
-        f"✅ **{crypto}** hamyon manzili muvaffaqiyatli o'zgartirildi!\n\nYangi manzil: `{new_address}`\n\n/admin — Panelga qaytish\n/start — Botni ko'rish",
-        parse_mode="Markdown"
+    # Streaming matn - asta-sekin ko'rinadi
+    stream_text = (
+        f"✅ **{crypto}** hamyon manzili muvaffaqiyatli o'zgartirildi!\n\n"
+        f"Yangi manzil: `{new_address}`\n\n"
+        f"/admin — Panelga qaytish\n"
+        f"/start — Botni ko'rish"
     )
+    
+    # Streaming orqali yuborish
+    await stream_message(update, stream_text)
+    
     return ConversationHandler.END
 
 # ==================== Cancel Callback & Command ====================
@@ -190,6 +236,27 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg_text)
         
     return ConversationHandler.END
+
+# ==================== ADMIN STATISTIKA (YANGI) ====================
+async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        await update.message.reply_text("❌ Siz admin emassiz!")
+        return
+    
+    total = len(crypto_addresses)
+    filled = sum(1 for addr in crypto_addresses.values() if addr)
+    
+    stats_text = (
+        f"📊 **Statistika**\n\n"
+        f"💼 Umumiy kripto: {total}\n"
+        f"✅ Manzil kiritilgan: {filled}\n"
+        f"❌ Manzil kiritilmagan: {total - filled}\n\n"
+        f"🔢 Foiz: {int(filled/total*100)}%"
+    )
+    
+    # Streaming orqali statistikani ham chiroyli ko'rsatish
+    await stream_message(update, stats_text)
 
 # ==================== MAIN START ====================
 def main():
@@ -208,12 +275,13 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("admin", admin_panel))
+    app.add_handler(CommandHandler("stats", admin_stats))  # YANGI! /stats buyrug'i
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(conv_handler)
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
 
-    print("🤖 Turli rangdagi tugmalarga ega bot muvaffaqiyatli ishga tushdi...")
+    print("🤖 Streaming + Stats funksiyalari qo'shilgan bot ishga tushdi...")
     app.run_polling()
 
 if __name__ == "__main__":
