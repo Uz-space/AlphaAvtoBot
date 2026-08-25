@@ -66,11 +66,11 @@ def create_progress(percent: int):
     return f"{line1}\n{line2}"
 
 def create_done():
-    """Tugallangan holat"""
+    """Tugallangan holat - 1 ta bo'shliq qo'shilgan"""
     text = "✅ 100%"
-    space = 22 - len(text)
-    left = space // 2
-    right = space - left
+    # 22 - 7 = 15 bo'sh joy, chapga 7, o'ngga 8 (1 ta ko'p)
+    left = 7
+    right = 8
     centered_text = " " * left + text + " " * right
     
     progress_bar = "▓" * 20
