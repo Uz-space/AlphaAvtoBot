@@ -33,10 +33,9 @@ admin_edit_target = {}
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
-# ==================== TUGMA YARATISH (OLMOS YO'Q) ====================
+# ==================== TUGMA YARATISH ====================
 def create_premium_button(code: str, info: dict):
-    """Premium emoji bilan tugma - olmossiz"""
-    text = f"{info['name']} ({code})"  # Faqat matn, olmos yo'q
+    text = f"{info['name']} ({code})"
     
     return InlineKeyboardButton(
         text=text,
@@ -45,12 +44,37 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== TUGMALARNI BIRMA-BIR QO'SHISH (TABLE + KATTA TUGMALAR) ====================
-async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Tugmalar birma-bir qo'shiladi - tugmalar katta bo'lib qoladi"""
+# ==================== TABLE PROGRESS BAR (TO'G'RILANGAN) ====================
+def create_progress_table(percent: int, total: int = 8):
+    """Progress barni table ichida to'g'ri ko'rsatish"""
     
+    # Progress barni hisoblash (20 belgidan iborat)
+    filled = int(percent / 100 * 20)
+    empty = 20 - filled
+    
+    # Progress bar (20 belgi)
+    progress_bar = "▓" * filled + "░" * empty
+    
+    # TABLE - har bir qator uzunligi 24 belgi (┌─┐, └─┘, │ │)
+    table = f"┌──────────────────────┐\n"
+    table += f"│  {percent:3}%  Yuklanmoqda      │\n"
+    table += f"│  {progress_bar}  │\n"
+    table += f"└──────────────────────┘"
+    
+    return table
+
+def create_done_table():
+    """Tugallangan holat"""
+    table = f"┌──────────────────────┐\n"
+    table += f"│  ✅ TAYYOR  100%      │\n"
+    table += f"│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  │\n"
+    table += f"└──────────────────────┘"
+    return table
+
+# ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
+async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text(
-        "⏳ Yuklanmoqda...",
+        "⏳",
         parse_mode="Markdown"
     )
     
@@ -58,50 +82,36 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
     keyboard = []
     
     for i, (code, info) in enumerate(crypto_list):
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.4)
         
-        # KATTA (UZUN) TUGMA
         button = create_premium_button(code, info)
         keyboard.append([button])
         
-        # TABLE ko'rinishida progress
-        progress = "▓" * (i + 1) + "░" * (len(crypto_list) - i - 1)
         percent = int((i + 1) / len(crypto_list) * 100)
-        
-        table_text = f"┌{'─' * 20}┐\n"
-        table_text += f"│ Yuklanmoqda {percent:3}% │\n"
-        table_text += f"│ {progress:<20} │\n"
-        table_text += f"└{'─' * 20}┘"
+        table = create_progress_table(percent)
         
         await msg.edit_text(
-            f"💳 **Kripto To'lov**\n\n```\n{table_text}\n```",
+            f"💳 **Kripto To'lov**\n\n```\n{table}\n```",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     
-    # Yakuniy - tugmalar kattaligicha qoladi
     await asyncio.sleep(0.3)
     keyboard.append([
         InlineKeyboardButton("📊 Kurslar", callback_data="prices", style="primary"),
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    # TABLE ko'rinishida tugallandi
-    table_text = f"┌{'─' * 20}┐\n"
-    table_text += f"│ ✅ TAYYOR    100% │\n"
-    table_text += f"│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │\n"
-    table_text += f"└{'─' * 20}┘"
+    table = create_done_table()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n```\n{table_text}\n```\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{table}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== 1-2-3-2 FORMAT (TABLE + KATTA TUGMALAR) ====================
+# ==================== 1-2-3-2 FORMAT ====================
 async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """1-2-3-2 formatda - tugmalar katta bo'lib qoladi"""
-    
     msg = await update.message.reply_text(
         "⏳",
         parse_mode="Markdown"
@@ -113,13 +123,12 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
     index = 0
     
     for row_count in layout:
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(0.5)
         
         row = []
         for _ in range(row_count):
             if index < len(crypto_list):
                 code, info = crypto_list[index]
-                # KATTA TUGMA
                 button = create_premium_button(code, info)
                 row.append(button)
                 index += 1
@@ -127,17 +136,11 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if row:
             keyboard.append(row)
             
-            # TABLE progress
             percent = int(index / len(crypto_list) * 100)
-            progress = "▓" * index + "░" * (len(crypto_list) - index)
-            
-            table_text = f"┌{'─' * 20}┐\n"
-            table_text += f"│ Yuklanmoqda {percent:3}% │\n"
-            table_text += f"│ {progress:<20} │\n"
-            table_text += f"└{'─' * 20}┘"
+            table = create_progress_table(percent)
             
             await msg.edit_text(
-                f"💳 **Kripto To'lov**\n\n```\n{table_text}\n```",
+                f"💳 **Kripto To'lov**\n\n```\n{table}\n```",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
@@ -148,21 +151,16 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    table_text = f"┌{'─' * 20}┐\n"
-    table_text += f"│ ✅ TAYYOR    100% │\n"
-    table_text += f"│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │\n"
-    table_text += f"└{'─' * 20}┘"
+    table = create_done_table()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n```\n{table_text}\n```\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{table}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
-# ==================== 2 TADAN (TABLE + KATTA TUGMALAR) ====================
+# ==================== 2 TADAN ====================
 async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """2 tadan tugmalar - katta bo'lib qoladi"""
-    
     msg = await update.message.reply_text(
         "⏳",
         parse_mode="Markdown"
@@ -173,9 +171,8 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
     row = []
     
     for i, (code, info) in enumerate(crypto_list):
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(0.3)
         
-        # KATTA TUGMA
         button = create_premium_button(code, info)
         row.append(button)
         
@@ -183,17 +180,11 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
             keyboard.append(row)
             row = []
             
-            # TABLE progress
             percent = int((i + 1) / len(crypto_list) * 100)
-            progress = "▓" * (i + 1) + "░" * (len(crypto_list) - i - 1)
-            
-            table_text = f"┌{'─' * 20}┐\n"
-            table_text += f"│ Yuklanmoqda {percent:3}% │\n"
-            table_text += f"│ {progress:<20} │\n"
-            table_text += f"└{'─' * 20}┘"
+            table = create_progress_table(percent)
             
             await msg.edit_text(
-                f"💳 **Kripto To'lov**\n\n```\n{table_text}\n```",
+                f"💳 **Kripto To'lov**\n\n```\n{table}\n```",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
@@ -207,13 +198,10 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    table_text = f"┌{'─' * 20}┐\n"
-    table_text += f"│ ✅ TAYYOR    100% │\n"
-    table_text += f"│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ │\n"
-    table_text += f"└{'─' * 20}┘"
+    table = create_done_table()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n```\n{table_text}\n```\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{table}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -317,11 +305,6 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    await query.edit_message_text(
-        "⏳",
-        parse_mode="Markdown"
-    )
-    
     crypto_list = list(CRYPTO_DATA.items())
     keyboard = []
     
@@ -334,8 +317,10 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
+    table = create_done_table()
+    
     await query.edit_message_text(
-        "💳 **Kripto To'lov**\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{table}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
