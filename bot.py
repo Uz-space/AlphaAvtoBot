@@ -44,19 +44,15 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (CHAPDA PROGRESS, O'NGDA FOIZ) ====================
+# ==================== PROGRESS BAR (DOIM FOIZ BILAN) ====================
 def create_progress(percent: int):
-    """Progress barni chapga, foizni o'ngga qo'yish"""
+    """Progress barni chapga, foizni o'ngga qo'yish - 100% da ham foiz qoladi"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
     
-    # Progress bar + foiz
+    # Progress bar + foiz (100% da ham foiz qoladi)
     return f"{progress_bar} {percent}%"
-
-def create_done():
-    """Tugallangan holat - faqat progress bar"""
-    return "▓" * 20
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,7 +85,8 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    progress = create_done()
+    # 100% da ham foiz qoladi
+    progress = create_progress(100)
     
     await msg.edit_text(
         f"```\n{progress}\n```",
@@ -138,7 +135,7 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    progress = create_done()
+    progress = create_progress(100)
     
     await msg.edit_text(
         f"```\n{progress}\n```",
@@ -185,7 +182,7 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    progress = create_done()
+    progress = create_progress(100)
     
     await msg.edit_text(
         f"```\n{progress}\n```",
@@ -295,7 +292,7 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    progress = create_done()
+    progress = create_progress(100)
     
     await query.edit_message_text(
         f"```\n{progress}\n```",
