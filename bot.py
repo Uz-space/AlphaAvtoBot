@@ -67,27 +67,21 @@ def is_admin(user_id: int) -> bool:
 def get_texts(lang_code: str):
     if lang_code == "en":
         return {
-            "select_crypto": "Select a cryptocurrency:",
             "no_address": "No address",
             "back_home": "🏠 Home",
             "address_updated": "address updated!",
-            "copy_address": "📋 Copy address"
         }
     elif lang_code == "ru":
         return {
-            "select_crypto": "Выберите криптовалюту:",
             "no_address": "Адрес отсутствует",
             "back_home": "🏠 Главная",
             "address_updated": "адрес обновлен!",
-            "copy_address": "📋 Копировать адрес"
         }
     else:  # uz
         return {
-            "select_crypto": "Kriptovalyutani tanlang:",
             "no_address": "Manzil yo'q",
             "back_home": "🏠 Bosh sahifa",
             "address_updated": "manzili o'zgartirildi!",
-            "copy_address": "📋 Nusxalash"
         }
 
 # ==================== PROGRESS BAR ====================
@@ -108,6 +102,16 @@ def create_premium_button(code: str, info: dict):
         style=info.get('color', 'primary'),
         icon_custom_emoji_id=info['emoji_id']
     )
+
+# ==================== ASOSIY KEYBOARD ====================
+def get_main_keyboard():
+    keyboard = []
+    
+    for code, info in CRYPTO_DATA.items():
+        button = create_premium_button(code, info)
+        keyboard.append([button])
+    
+    return keyboard
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
 async def show_crypto_with_progress(update: Update, context: ContextTypes.DEFAULT_TYPE, msg):
@@ -170,13 +174,9 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await query.edit_message_text("⏳")
     keyboard = await show_crypto_with_progress(update, context, msg)
     
-    texts = get_texts(lang_code)
-    
-    # Progress bar to'liq bo'lgandan keyin matnni chiqarish
-    progress = create_progress(100)
+    # Progress bar tugagach, faqat tugmalarni qoldiramiz
     await msg.edit_text(
-        f"```\n{progress}\n```\n\n{texts['select_crypto']}",
-        parse_mode="Markdown",
+        "",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -224,18 +224,11 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     
-    user_id = query.from_user.id
-    lang_code = user_language.get(user_id, "uz")
-    texts = get_texts(lang_code)
+    # Progress barsiz darhol tugmalarni chiqaramiz
+    keyboard = get_main_keyboard()
     
-    # Progress bar bilan qaytish
-    msg = await query.edit_message_text("⏳")
-    keyboard = await show_crypto_with_progress(update, context, msg)
-    
-    progress = create_progress(100)
-    await msg.edit_text(
-        f"```\n{progress}\n```\n\n{texts['select_crypto']}",
-        parse_mode="Markdown",
+    await query.edit_message_text(
+        "",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
