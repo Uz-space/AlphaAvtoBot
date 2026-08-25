@@ -44,46 +44,29 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== TABLE (20 BELGI) + PROGRESS BAR (20 BELGI) ====================
-def create_progress_table(percent: int):
-    """Progress barni table ichida markazda ko'rsatish - 20 belgi"""
-    
-    # Progress bar 20 belgi
+# ==================== PROGRESS BAR (MONOSPACE + CHEGARALAR) ====================
+def create_progress(percent: int):
+    """Progress barni monospace va chegaralar bilan"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
     
-    # Matnni markazga joylashtirish (20 belgidan iborat qator)
-    text = f"{percent:3}% Yuklanmoqda"
-    text_padding = (20 - len(text)) // 2
-    centered_text = " " * text_padding + text + " " * (20 - len(text) - text_padding)
+    # Markazga joylashtirish
+    text = f"{percent:3}%"
+    padding = (22 - len(text)) // 2
+    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
     
-    # TABLE 20 belgi
-    table = f"┌────────────────────┐\n"
-    table += f"│{centered_text}│\n"
-    table += f"│{progress_bar}│\n"
-    table += f"└────────────────────┘"
-    
-    return table
+    return f"│{centered_text}│\n│{progress_bar}│"
 
-def create_done_table():
-    """Tugallangan holat - 20 belgi"""
+def create_done():
+    """Tugallangan holat"""
+    text = "✅ 100%"
+    padding = (22 - len(text)) // 2
+    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
     
-    # Matnni markazga
-    text = "✅ TAYYOR 100%"
-    text_padding = (20 - len(text)) // 2
-    centered_text = " " * text_padding + text + " " * (20 - len(text) - text_padding)
-    
-    # Progress bar 20 belgi
     progress_bar = "▓" * 20
     
-    # TABLE 20 belgi
-    table = f"┌────────────────────┐\n"
-    table += f"│{centered_text}│\n"
-    table += f"│{progress_bar}│\n"
-    table += f"└────────────────────┘"
-    
-    return table
+    return f"│{centered_text}│\n│{progress_bar}│"
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -102,10 +85,10 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         keyboard.append([button])
         
         percent = int((i + 1) / len(crypto_list) * 100)
-        table = create_progress_table(percent)
+        progress = create_progress(percent)
         
         await msg.edit_text(
-            f"💳 **Kripto To'lov**\n\n{table}",
+            f"💳 **Kripto To'lov**\n\n```\n{progress}\n```",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -116,10 +99,10 @@ async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_T
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    table = create_done_table()
+    progress = create_done()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n{table}\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -151,10 +134,10 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
             keyboard.append(row)
             
             percent = int(index / len(crypto_list) * 100)
-            table = create_progress_table(percent)
+            progress = create_progress(percent)
             
             await msg.edit_text(
-                f"💳 **Kripto To'lov**\n\n{table}",
+                f"💳 **Kripto To'lov**\n\n```\n{progress}\n```",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
@@ -165,10 +148,10 @@ async def show_crypto_fancy(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    table = create_done_table()
+    progress = create_done()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n{table}\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -195,10 +178,10 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
             row = []
             
             percent = int((i + 1) / len(crypto_list) * 100)
-            table = create_progress_table(percent)
+            progress = create_progress(percent)
             
             await msg.edit_text(
-                f"💳 **Kripto To'lov**\n\n{table}",
+                f"💳 **Kripto To'lov**\n\n```\n{progress}\n```",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
@@ -212,10 +195,10 @@ async def show_crypto_two_by_two(update: Update, context: ContextTypes.DEFAULT_T
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    table = create_done_table()
+    progress = create_done()
     
     await msg.edit_text(
-        f"💳 **Kripto To'lov**\n\n{table}\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -322,10 +305,10 @@ async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         InlineKeyboardButton("❓ Yordam", callback_data="help", style="primary")
     ])
     
-    table = create_done_table()
+    progress = create_done()
     
     await query.edit_message_text(
-        f"💳 **Kripto To'lov**\n\n{table}\n👇 Tanlang:",
+        f"💳 **Kripto To'lov**\n\n```\n{progress}\n```\n👇 Tanlang:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
