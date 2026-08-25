@@ -216,7 +216,7 @@ async def show_prices(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "📊 **Kurslar**\n\n"
     for code, price in prices.items():
         info = CRYPTO_DATA[code]
-        text += f"[{code}](tg://emoji?id={info['emoji_id']}) **{code}:** {price}\n"
+        text += f"[](tg://emoji?id={info['emoji_id']}) **{code}:** {price}\n"
     
     keyboard = [[
         InlineKeyboardButton("🔄 Yangilash", callback_data="prices", style="primary"),
@@ -265,14 +265,14 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not address:
         await query.edit_message_text(
-            f"⚠️ [{crypto}](tg://emoji?id={info['emoji_id']}) **{crypto}** manzili yo'q\n⏳ Admin qo'shadi",
+            f"⚠️ [](tg://emoji?id={info['emoji_id']}) **{crypto}** manzili yo'q\n⏳ Admin qo'shadi",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup(back_keyboard),
         )
         return
 
     await query.edit_message_text(
-        f"💳 [{crypto}](tg://emoji?id={info['emoji_id']}) **{crypto}**\n\n"
+        f"💳 [](tg://emoji?id={info['emoji_id']}) **{crypto}**\n\n"
         f"```\n{address}\n```\n\n"
         f"📤 Yuqoridagi manzilga to'lov yuboring",
         parse_mode="Markdown",
