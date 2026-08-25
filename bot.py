@@ -44,31 +44,41 @@ def create_premium_button(code: str, info: dict):
         icon_custom_emoji_id=info['emoji_id']
     )
 
-# ==================== PROGRESS BAR (TO'G'RI 22 BELGI) ====================
+# ==================== PROGRESS BAR (TO'G'RI) ====================
 def create_progress(percent: int):
-    """Progress barni to'g'ri chiziqlar bilan - 22 belgi"""
+    """Progress barni to'g'ri chiziqlar bilan"""
     filled = int(percent / 100 * 20)
     empty = 20 - filled
     progress_bar = "▓" * filled + "░" * empty
     
     # Matnni markazga (22 belgi ichida)
     text = f"{percent:3}%"
-    padding = (22 - len(text)) // 2
-    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
+    # 22 - len(text) = bo'sh joy
+    space = 22 - len(text)
+    left = space // 2
+    right = space - left
+    centered_text = " " * left + text + " " * right
     
-    return f"│{centered_text}│\n│{progress_bar}│"
+    # Ikkala qatorni ham bir xil uzunlikda qilish
+    line1 = "│" + centered_text + "│"
+    line2 = "│" + progress_bar + "│"
+    
+    return f"{line1}\n{line2}"
 
 def create_done():
-    """Tugallangan holat - 22 belgi"""
-    # Matnni markazga (22 belgi ichida)
+    """Tugallangan holat"""
     text = "✅ 100%"
-    padding = (22 - len(text)) // 2
-    centered_text = " " * padding + text + " " * (22 - len(text) - padding)
+    space = 22 - len(text)
+    left = space // 2
+    right = space - left
+    centered_text = " " * left + text + " " * right
     
-    # Progress bar 20 belgi
     progress_bar = "▓" * 20
     
-    return f"│{centered_text}│\n│{progress_bar}│"
+    line1 = "│" + centered_text + "│"
+    line2 = "│" + progress_bar + "│"
+    
+    return f"{line1}\n{line2}"
 
 # ==================== TUGMALARNI BIRMA-BIR QO'SHISH ====================
 async def show_crypto_one_by_one(update: Update, context: ContextTypes.DEFAULT_TYPE):
