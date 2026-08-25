@@ -7,7 +7,7 @@ from telegram.ext import (
 
 # ===================== TOKEN & ID =====================
 BOT_TOKEN = "8930805461:AAGd7e2qPGqu7lJjOLO-Pv1Ha9DkbbniyxM"
-ADMIN_IDS = [8758410535]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING (Son shaklida)
+ADMIN_IDS = [8758410535]  # BU YERGA O'Z TELEGRAM ID INGIZNI YOZING
 # ======================================================
 
 logging.basicConfig(level=logging.INFO)
@@ -33,16 +33,28 @@ def is_admin(user_id: int) -> bool:
 
 def build_keyboard():
     """
-    Foydalanuvchiga barcha kripto tugmalari Moviy (primary) rangda ko'rinadi.
+    Siz so'ragan maxsus ranglar kombinatsiyasi asosida tugmalar yasaladi.
     """
     keyboard = []
     for code, info in CRYPTO_DATA.items():
-        keyboard.append([InlineKeyboardButton(
-            text=f" {info['name']} ({code})",
-            callback_data=f"crypto_{code}",
-            icon_custom_emoji_id=info['emoji_id'],
-            style="primary"  # 🔵 TUGMA KO'K (PRIMARY) RANGDA BO'LADI
-        )])
+        # Tugma parametrlarini boshlang'ich sozlash
+        btn_kwargs = {
+            "text": f" {info['name']} ({code})",
+            "callback_data": f"crypto_{code}",
+            "icon_custom_emoji_id": info['emoji_id']
+        }
+        
+        # Har bir kriptovalyutaga alohida rang berish sharti
+        if code in ["BTC", "ETH"]:
+            btn_kwargs["style"] = "danger"    # 🔴 Qizil tugma
+        elif code in ["BNB", "SOL"]:
+            btn_kwargs["style"] = "success"   # 🟢 Yashil tugma
+        elif code in ["LTC", "TON"]:
+            btn_kwargs["style"] = "primary"   # 🔵 Ko'k tugma
+        # TRX va DOGE uchun style yozilmaydi, Telegram o'zining original neytral rangini qoldiradi.
+
+        keyboard.append([InlineKeyboardButton(**btn_kwargs)])
+        
     return InlineKeyboardMarkup(keyboard)
 
 # ==================== /start ====================
@@ -62,7 +74,6 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     crypto = query.data.replace("crypto_", "")
     address = crypto_addresses.get(crypto, "")
 
-    # Orqaga qaytish tugmasi neytral (oddiy) ko'rinishda qoladi
     back_keyboard = [[InlineKeyboardButton("⬅️ Orqaga", callback_data="back_start")]]
 
     if not address:
@@ -101,13 +112,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for crypto in CRYPTO_DATA.keys():
         addr = crypto_addresses[crypto]
         
-        # Manzil bor bo'lsa yashil tugma, yo'q bo'lsa qizil tugma chiqadi
         if addr:
             btn_text = f"✅ {crypto} manzilini yangilash"
-            btn_style = "success"  # 🟢 TUGMA YASHIL RANGDA BO'LADI
+            btn_style = "success"
         else:
             btn_text = f"❌ {crypto} manzilini kiritish"
-            btn_style = "danger"   # 🔴 TUGMA QIZIL RANGDA BO'LADI
+            btn_style = "danger"
 
         keyboard.append([InlineKeyboardButton(
             text=btn_text,
@@ -137,7 +147,6 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     current = crypto_addresses[crypto]
     current_text = f"\nHozirgi manzil: `{current}`" if current else "\nHozirgi manzil: kiritilmagan"
 
-    # Bekor qilish tugmasi qizil (danger) dizaynda bo'ladi
     cancel_keyboard = [[InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_action", style="danger")]]
 
     await query.edit_message_text(
@@ -169,7 +178,6 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== Cancel Callback & Command ====================
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # CallbackQuery yoki oddiy xabar orqali kelganini tekshirish
     target_user = update.effective_user.id
     if target_user in admin_edit_target:
         del admin_edit_target[target_user]
@@ -205,7 +213,7 @@ def main():
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern="^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern="^back_start$"))
 
-    print("🤖 Rangli tugmalarga ega bot muvaffaqiyatli ishga tushdi...")
+    print("🤖 Turli rangdagi tugmalarga ega bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
 
 if __name__ == "__main__":
