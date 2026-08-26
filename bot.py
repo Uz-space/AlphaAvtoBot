@@ -30,16 +30,30 @@ TEXTS = {
         "ask_phone": "Xush kelibsiz! Botdan foydalanishni boshlash uchun telefon raqamingizni yuboring:",
         "phone_btn": "📱 Telefon raqamni yuborish",
         "phone_received": "Raqamingiz muvaffaqiyatli qabul qilindi. Iltimos, ism va familiyangizni kiriting:",
-        "name_received": "✅ Ism va familiyangiz qabul qilindi!",
+        "name_received": "✅ Maʼlumotlaringiz qabul qilindi.\nQuyidagi menyu tugmalaridan foydalaning.",
     },
     "uz_cyrillic": {
         "choose_lang": "🌐 Tilni tanlang / Тилни танланг:",
         "ask_phone": "Хуш келибсиз! Ботдан фойдаланишни бошлаш учун телефон рақамингизни юборинг:",
         "phone_btn": "📱 Телефон рақамни юбориш",
         "phone_received": "Рақамингиз муваффақиятли қабул қилинди. Илтимос, исм ва фамилиянгизни киритинг:",
-        "name_received": "✅ Исм ва фамилиянгиз қабул қилинди!",
+        "name_received": "✅ Маълумотларингиз қабул қилинди.\nҚуйидаги меню тугмаларидан фойдаланинг.",
     },
 }
+
+# --- Menyu tugmalari (asosiy menyu) ---
+def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
+    if lang == "uz_latin":
+        keyboard = [
+            ["📋 Profil", "🔄 Sozlamalar"],
+            ["ℹ️ Yordam", "📞 Biz bilan bog'lanish"],
+        ]
+    else:  # uz_cyrillic
+        keyboard = [
+            ["📋 Профил", "🔄 Созламалар"],
+            ["ℹ️ Ёрдам", "📞 Биз билан боғланиш"],
+        ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # --- Til tanlash klaviaturasi (inline) ---
 def language_keyboard() -> InlineKeyboardMarkup:
@@ -134,16 +148,89 @@ async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # Ism-familiya kutilish holatini o'chirish
     context.user_data["waiting_for_name"] = False
     
-    # Tasdiqlash xabari
+    # Tasdiqlash xabari va menyuni ko'rsatish
     await update.message.reply_text(
         TEXTS[lang]["name_received"],
-        reply_markup=ReplyKeyboardRemove(),
+        reply_markup=main_menu_keyboard(lang),
     )
     
     logger.info(f"Foydalanuvchi ismi: {full_name}")
+
+# --- Menyu tugmalarini qayta ishlash ---
+async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Agar ism-familiya kutilayotgan bo'lsa, bu funksiya ishlamasligi kerak
+    if context.user_data.get("waiting_for_name", False):
+        return
     
-    # Bu yerga keyingi qadamlarni qo'shing (masalan, menyu ko'rsatish)
-    # await show_main_menu(update, context)
+    lang = context.user_data.get("lang", "uz_latin")
+    text = update.message.text
+    
+    if text in ["📋 Profil", "📋 Профил"]:
+        await show_profile(update, context)
+    elif text in ["🔄 Sozlamalar", "🔄 Созламалар"]:
+        await show_settings(update, context)
+    elif text in ["ℹ️ Yordam", "ℹ️ Ёрдам"]:
+        await show_help(update, context)
+    elif text in ["📞 Biz bilan bog'lanish", "📞 Биз билан боғланиш"]:
+        await show_contact(update, context)
+    else:
+        await update.message.reply_text(
+            "Iltimos, menyu tugmalaridan birini tanlang." if lang == "uz_latin" else "Илтимос, меню тугмаларидан бирини танланг."
+        )
+
+# --- Profil ko'rsatish ---
+async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    lang = context.user_data.get("lang", "uz_latin")
+    phone = context.user_data.get("phone", "Noma'lum")
+    full_name = context.user_data.get("full_name", "Noma'lum")
+    
+    if lang == "uz_latin":
+        text = f"👤 <b>Profil ma'lumotlari</b>\n\n"
+        text += f"📛 Ism-familiya: {full_name}\n"
+        text += f"📱 Telefon: {phone}"
+    else:
+        text = f"👤 <b>Профил маълумотлари</b>\n\n"
+        text += f"📛 Исм-фамилия: {full_name}\n"
+        text += f"📱 Телефон: {phone}"
+    
+    await update.message.reply_text(text, parse_mode="HTML")
+
+# --- Sozlamalar ko'rsatish ---
+async def show_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    lang = context.user_data.get("lang", "uz_latin")
+    
+    if lang == "uz_latin":
+        text = "⚙️ <b>Sozlamalar</b>\n\nHozircha sozlamalar mavjud emas."
+    else:
+        text = "⚙️ <b>Созламалар</b>\n\nҲозирча созламалар мавжуд эмас."
+    
+    await update.message.reply_text(text, parse_mode="HTML")
+
+# --- Yordam ko'rsatish ---
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    lang = context.user_data.get("lang", "uz_latin")
+    
+    if lang == "uz_latin":
+        text = "ℹ️ <b>Yordam</b>\n\nBotdan foydalanish bo'yicha ko'rsatmalar..."
+    else:
+        text = "ℹ️ <b>Ёрдам</b>\n\nБотдан фойдаланиш бўйича кўрсатмалар..."
+    
+    await update.message.reply_text(text, parse_mode="HTML")
+
+# --- Bog'lanish ko'rsatish ---
+async def show_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    lang = context.user_data.get("lang", "uz_latin")
+    
+    if lang == "uz_latin":
+        text = "📞 <b>Biz bilan bog'lanish</b>\n\n"
+        text += "Telefon: +998 90 123 45 67\n"
+        text += "Email: info@example.com"
+    else:
+        text = "📞 <b>Биз билан боғланиш</b>\n\n"
+        text += "Телефон: +998 90 123 45 67\n"
+        text += "Email: info@example.com"
+    
+    await update.message.reply_text(text, parse_mode="HTML")
 
 # --- Asosiy funksiya ---
 def main() -> None:
@@ -155,6 +242,7 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(language_callback, pattern="^lang_"))
     app.add_handler(MessageHandler(filters.CONTACT, contact_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, name_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, menu_handler))
 
     logger.info("Bot ishga tushdi...")
     app.run_polling()
