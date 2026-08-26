@@ -57,8 +57,19 @@ def phone_keyboard(lang: str) -> ReplyKeyboardMarkup:
 
 # --- /start komandasi ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    text = "🌐 Tilni tanlang / Тилни танланг:"
-    await update.message.reply_text(text, reply_markup=language_keyboard())
+    # Agar foydalanuvchi avval til tanlagan bo'lsa, to'g'ridan-to'g'ri telefon so'rang
+    if "lang" in context.user_data:
+        lang = context.user_data["lang"]
+        await update.message.reply_text(
+            TEXTS[lang]["ask_phone"],
+            reply_markup=phone_keyboard(lang),
+        )
+    else:
+        # Til tanlashni so'rang
+        await update.message.reply_text(
+            TEXTS["uz_latin"]["choose_lang"],
+            reply_markup=language_keyboard(),
+        )
 
 # --- Til tanlash callback ---
 async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -77,10 +88,10 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     # Tilni saqlash
     context.user_data["lang"] = selected
 
-    # Inline xabarni o'chirish
-    await query.edit_message_text(TEXTS[selected]["ask_phone"])
+    # Oldingi inline xabarni o'chirish
+    await query.delete_message()
 
-    # Telefon tugmasi yuborish
+    # Yangi xabar yuborish (faqat 1 marta)
     await query.message.reply_text(
         TEXTS[selected]["ask_phone"],
         reply_markup=phone_keyboard(selected),
@@ -98,13 +109,18 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         TEXTS[lang]["phone_received"],
         reply_markup=ReplyKeyboardRemove(),
     )
-
-    # Keyingi qadamlar shu yerdan davom etadi...
+    
+    logger.info(f"Foydalanuvchi {phone} raqamini yubordi")
+    
+    # Bu yerga keyingi qadamlarni qo'shing (masalan, menyu ko'rsatish)
 
 # --- Asosiy funksiya ---
 def main() -> None:
-    TOKEN = "8749302193:AAFOeDLDoimdjHSVDO728nAtsBngqncy8Uk"  # <-- shu yerga o'z tokeningizni kiriting
-
+    TOKEN = "8749302193:AAFOeDLDoimdjHSVDO728nAtsBngqncy8Uk"
+    
+    # Proxy kerak bo'lsa (ixtiyoriy):
+    # app = ApplicationBuilder().token(TOKEN).connect_timeout(30).read_timeout(30).build()
+    
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
