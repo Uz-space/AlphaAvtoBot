@@ -165,6 +165,10 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Admin emassiz!")
         return
 
+    # Har safar fayldan qayta yuklash — xotira va fayl farq qilmasligi uchun
+    global crypto_addresses
+    crypto_addresses = load_addresses()
+
     keyboard = []
     for crypto, info in CRYPTO_DATA.items():
         addr = crypto_addresses.get(crypto, "")
@@ -217,6 +221,8 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # ==================== ADMIN: MANZILNI QABUL QILISH ====================
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global crypto_addresses
+
     if not is_admin(update.effective_user.id):
         return ConversationHandler.END
 
@@ -230,8 +236,11 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Bo'sh manzil qabul qilinmadi.")
         return WAITING_ADDRESS
 
+    # Saqlash
     crypto_addresses[crypto] = new_address
     save_addresses(crypto_addresses)
+    # Fayldan qayta yuklab xotirani sinxronlash
+    crypto_addresses = load_addresses()
 
     context.user_data.pop("edit_crypto", None)
 
@@ -245,7 +254,8 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
     )
 
-    # Yangilangan admin panelni avtomatik ko'rsatish
+    # Yangilangan holatda admin panelni ko'rsatish
+
     keyboard = []
     for c, inf in CRYPTO_DATA.items():
         addr = crypto_addresses.get(c, "")
