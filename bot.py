@@ -181,6 +181,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
+    return ConversationHandler.END
 
 # ==================== ADMIN: TAHRIRLASH BOSHLASH ====================
 async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -286,27 +287,29 @@ def main():
     # ConversationHandler — admin tahrirlash uchun
     conv_handler = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(admin_edit_callback, pattern=r"^admin_edit_")
+            CommandHandler("admin", admin_panel),
+            CallbackQueryHandler(admin_edit_callback, pattern=r"^admin_edit_"),
         ],
         states={
             WAITING_ADDRESS: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_address),
+                CallbackQueryHandler(cancel, pattern=r"^cancel_action$"),
             ],
         },
         fallbacks=[
             CommandHandler("cancel", cancel),
+            CommandHandler("start", start),
             CallbackQueryHandler(cancel, pattern=r"^cancel_action$"),
         ],
-        # Muhim: per_message=False bo'lishi kerak
         per_message=False,
         per_chat=True,
         per_user=True,
+        allow_reentry=True,
     )
 
     # Handler tartib muhim: ConversationHandler birinchi!
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CommandHandler("cancel", cancel))
     app.add_handler(CallbackQueryHandler(crypto_callback, pattern=r"^crypto_"))
     app.add_handler(CallbackQueryHandler(back_start, pattern=r"^back_start$"))
