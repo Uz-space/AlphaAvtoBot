@@ -29,13 +29,15 @@ TEXTS = {
         "choose_lang": "🌐 Tilni tanlang / Тилни танланг:",
         "ask_phone": "Xush kelibsiz! Botdan foydalanishni boshlash uchun telefon raqamingizni yuboring:",
         "phone_btn": "📱 Telefon raqamni yuborish",
-        "phone_received": "✅ Telefon raqamingiz qabul qilindi!",
+        "phone_received": "Raqamingiz muvaffaqiyatli qabul qilindi. Iltimos, ism va familiyangizni kiriting:",
+        "name_received": "✅ Ism va familiyangiz qabul qilindi!",
     },
     "uz_cyrillic": {
         "choose_lang": "🌐 Tilni tanlang / Тилни танланг:",
         "ask_phone": "Хуш келибсиз! Ботдан фойдаланишни бошлаш учун телефон рақамингизни юборинг:",
         "phone_btn": "📱 Телефон рақамни юбориш",
-        "phone_received": "✅ Телефон рақамингиз қабул қилинди!",
+        "phone_received": "Рақамингиз муваффақиятли қабул қилинди. Илтимос, исм ва фамилиянгизни киритинг:",
+        "name_received": "✅ Исм ва фамилиянгиз қабул қилинди!",
     },
 }
 
@@ -102,9 +104,10 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     lang = context.user_data.get("lang", "uz_latin")
     phone = update.message.contact.phone_number
 
-    # Raqamni saqlash
+    # Telefon raqamni saqlash
     context.user_data["phone"] = phone
 
+    # Telefon klaviaturasini o'chirish va ism-familiya so'rash
     await update.message.reply_text(
         TEXTS[lang]["phone_received"],
         reply_markup=ReplyKeyboardRemove(),
@@ -112,20 +115,46 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     
     logger.info(f"Foydalanuvchi {phone} raqamini yubordi")
     
+    # Keyingi qadam: ism-familiya kutish holatiga o'tish
+    context.user_data["waiting_for_name"] = True
+
+# --- Ism-familiya qabul qilish ---
+async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Faqat ism-familiya kutilayotgan holatda ishlaydi
+    if not context.user_data.get("waiting_for_name", False):
+        # Agar ism-familiya kutilmayotgan bo'lsa, xabarni ignore qilamiz
+        return
+    
+    lang = context.user_data.get("lang", "uz_latin")
+    full_name = update.message.text.strip()
+    
+    # Ism-familiyani saqlash
+    context.user_data["full_name"] = full_name
+    
+    # Ism-familiya kutilish holatini o'chirish
+    context.user_data["waiting_for_name"] = False
+    
+    # Tasdiqlash xabari
+    await update.message.reply_text(
+        TEXTS[lang]["name_received"],
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    
+    logger.info(f"Foydalanuvchi ismi: {full_name}")
+    
     # Bu yerga keyingi qadamlarni qo'shing (masalan, menyu ko'rsatish)
+    # await show_main_menu(update, context)
 
 # --- Asosiy funksiya ---
 def main() -> None:
     TOKEN = "8749302193:AAFOeDLDoimdjHSVDO728nAtsBngqncy8Uk"
-    
-    # Proxy kerak bo'lsa (ixtiyoriy):
-    # app = ApplicationBuilder().token(TOKEN).connect_timeout(30).read_timeout(30).build()
     
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(language_callback, pattern="^lang_"))
     app.add_handler(MessageHandler(filters.CONTACT, contact_handler))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, name_handler))
 
     logger.info("Bot ishga tushdi...")
     app.run_polling()
