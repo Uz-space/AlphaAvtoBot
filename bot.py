@@ -227,17 +227,36 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     crypto_addresses[crypto] = new_address
     save_addresses(crypto_addresses)
 
-    # State ni tozalash
     context.user_data.pop("edit_crypto", None)
 
     info = CRYPTO_DATA.get(crypto, {})
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
+    # Tasdiqlash
     await update.message.reply_text(
         f"{emoji} ✅ <b>{crypto}</b> manzili saqlandi!\n\n"
         f"<code>{new_address}</code>",
         parse_mode="HTML",
     )
+
+    # Yangilangan admin panelni avtomatik ko'rsatish
+    keyboard = []
+    for c, inf in CRYPTO_DATA.items():
+        addr = crypto_addresses.get(c, "")
+        btn_text = f"✅ {c} — yangilash" if addr else f"➕ {c} — kiritish"
+        keyboard.append([InlineKeyboardButton(
+            text=btn_text,
+            callback_data=f"admin_edit_{c}",
+            style="success" if addr else "danger",
+            icon_custom_emoji_id=inf["emoji_id"],
+        )])
+
+    await update.message.reply_text(
+        "⚙️ <b>Admin Panel</b>\n\nQaysi cryptoni tahrirlash?",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
     return ConversationHandler.END
 
 # ==================== BEKOR QILISH ====================
