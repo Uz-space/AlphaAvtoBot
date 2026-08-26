@@ -30,8 +30,8 @@ TEXTS = {
 def language_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [
-            InlineKeyboardButton("o'zbekcha", callback_data="lang_uz_latin"),
-            InlineKeyboardButton("кирилча", callback_data="lang_uz_cyrillic"),
+            InlineKeyboardButton("🇺🇿 Oʻzbekcha", callback_data="lang_uz_latin"),
+            InlineKeyboardButton("🇺🇿 Кириллча", callback_data="lang_uz_cyrillic"),
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
