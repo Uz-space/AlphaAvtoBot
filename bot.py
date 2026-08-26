@@ -64,6 +64,8 @@ def build_main_keyboard() -> InlineKeyboardMarkup:
         keyboard.append([InlineKeyboardButton(
             text=f"{info['name']} ({code})",
             callback_data=f"crypto_{code}",
+            style=info.get("color", "primary"),
+            icon_custom_emoji_id=info["emoji_id"],
         )])
     return InlineKeyboardMarkup(keyboard)
 
@@ -88,6 +90,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton(
             text=f"{info['name']} ({code})",
             callback_data=f"crypto_{code}",
+            style=info.get("color", "primary"),
+            icon_custom_emoji_id=info["emoji_id"],
         )])
         percent = int((i + 1) / len(crypto_list) * 100)
         try:
@@ -114,7 +118,7 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     address = crypto_addresses.get(crypto, "")
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
-    back_btn = [[InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start")]]
+    back_btn = [[InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")]]
 
     text = (
         f"{emoji} <b>{info['name']} ({crypto})</b>\n\n"
@@ -161,6 +165,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton(
             text=btn_text,
             callback_data=f"admin_edit_{crypto}",
+            style="success" if addr else "danger",
+            icon_custom_emoji_id=info["emoji_id"],
         )])
 
     await update.message.reply_text(
@@ -193,7 +199,7 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
             f"{emoji} <b>{crypto}</b> uchun yangi manzilni yuboring:{current_text}",
             parse_mode="HTML",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("❌ Bekor", callback_data="cancel_action")
+                InlineKeyboardButton("❌ Bekor", callback_data="cancel_action", style="danger")
             ]]),
         )
     except Exception:
