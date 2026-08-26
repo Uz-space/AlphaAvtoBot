@@ -28,25 +28,30 @@ CRYPTO_DATA = {
 }
 
 # ==================== FAYL BILAN ISHLASH ====================
-DATA_FILE = "addresses.json"
+# Har doim bot.py turgan papkada saqlanadi
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_FILE = os.path.join(BASE_DIR, "addresses.json")
 
 def load_addresses():
     if os.path.exists(DATA_FILE):
         try:
-            with open(DATA_FILE, 'r') as f:
+            with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # Yangi cryptolar uchun bo'sh qiymat qo'shish
                 for k in CRYPTO_DATA:
                     if k not in data:
                         data[k] = ""
                 return data
-        except Exception:
-            pass
+        except Exception as e:
+            logging.error(f"addresses.json o'qishda xato: {e}")
     return {k: "" for k in CRYPTO_DATA}
 
 def save_addresses(addresses):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(addresses, f, indent=2)
+    try:
+        with open(DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(addresses, f, indent=2, ensure_ascii=False)
+        logging.info(f"Saqlandi: {DATA_FILE}")
+    except Exception as e:
+        logging.error(f"Saqlashda xato: {e}")
 
 crypto_addresses = load_addresses()
 
