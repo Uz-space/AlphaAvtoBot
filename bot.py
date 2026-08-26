@@ -5,7 +5,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
-    MessageHandler, filters, ContextTypes, ConversationHandler
+    MessageHandler, filters, ContextTypes
 )
 
 # ===================== TOKEN & ID =====================
@@ -15,311 +15,260 @@ ADMIN_IDS = [8758410535]
 
 logging.basicConfig(level=logging.INFO)
 
-# ==================== CRYPTO MA'LUMOTLARI ====================
 CRYPTO_DATA = {
-    "BTC": {"name": "Bitcoin",  "emoji_id": "5215346446429103945", "color": "danger"},
-    "ETH": {"name": "Ethereum", "emoji_id": "5215357136602698456", "color": "primary"},
-    "BNB": {"name": "BNB",      "emoji_id": "5215553828924995476", "color": "success"},
-    "SOL": {"name": "Solana",   "emoji_id": "5215299923343353183", "color": "primary"},
-    "LTC": {"name": "Litecoin", "emoji_id": "5215555130300080404", "color": "success"},
-    "TON": {"name": "Toncoin",  "emoji_id": "5215261504860891404", "color": "primary"},
-    "TRX": {"name": "TRON",     "emoji_id": "5215509887114584038", "color": "danger"},
-    "DOGE": {"name": "Dogecoin","emoji_id": "5215634149108392152", "color": "success"},
+    "BTC":  {"name": "Bitcoin",  "emoji_id": "5215346446429103945", "color": "danger"},
+    "ETH":  {"name": "Ethereum", "emoji_id": "5215357136602698456", "color": "primary"},
+    "BNB":  {"name": "BNB",      "emoji_id": "5215553828924995476", "color": "success"},
+    "SOL":  {"name": "Solana",   "emoji_id": "5215299923343353183", "color": "primary"},
+    "LTC":  {"name": "Litecoin", "emoji_id": "5215555130300080404", "color": "success"},
+    "TON":  {"name": "Toncoin",  "emoji_id": "5215261504860891404", "color": "primary"},
+    "TRX":  {"name": "TRON",     "emoji_id": "5215509887114584038", "color": "danger"},
+    "DOGE": {"name": "Dogecoin", "emoji_id": "5215634149108392152", "color": "success"},
 }
 
-# ==================== FAYL BILAN ISHLASH ====================
-# Har doim bot.py turgan papkada saqlanadi
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, "addresses.json")
 
 def load_addresses():
     if os.path.exists(DATA_FILE):
         try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                for k in CRYPTO_DATA:
-                    if k not in data:
-                        data[k] = ""
-                return data
+            for k in CRYPTO_DATA:
+                data.setdefault(k, "")
+            return data
         except Exception as e:
-            logging.error(f"addresses.json o'qishda xato: {e}")
+            logging.error(f"load_addresses xato: {e}")
     return {k: "" for k in CRYPTO_DATA}
 
-def save_addresses(addresses):
+def save_addresses(data: dict):
     try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(addresses, f, indent=2, ensure_ascii=False)
-        logging.info(f"Saqlandi: {DATA_FILE}")
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        logging.error(f"Saqlashda xato: {e}")
+        logging.error(f"save_addresses xato: {e}")
 
-crypto_addresses = load_addresses()
+def is_admin(uid: int) -> bool:
+    return uid in ADMIN_IDS
 
-# ==================== CONVERSATION STATE ====================
-WAITING_ADDRESS = 1
+# ── progress bar ──────────────────────────────────────
+def progress_text(pct: int) -> str:
+    filled = int(pct / 100 * 20)
+    bar    = "▓" * filled + "░" * (20 - filled)
+    return f"```\n{bar}{pct:>4}%\n```"
 
-def is_admin(user_id: int) -> bool:
-    return user_id in ADMIN_IDS
-
-# ==================== YORDAMCHI FUNKSIYALAR ====================
-def build_main_keyboard() -> InlineKeyboardMarkup:
-    """Asosiy crypto tugmalar klaviaturasini yaratish"""
-    keyboard = []
+# ── klaviaturalar ─────────────────────────────────────
+def main_keyboard() -> InlineKeyboardMarkup:
+    rows = []
     for code, info in CRYPTO_DATA.items():
-        keyboard.append([InlineKeyboardButton(
+        rows.append([InlineKeyboardButton(
             text=f"{info['name']} ({code})",
-            callback_data=f"crypto_{code}",
-            style=info.get("color", "primary"),
+            callback_data=f"c_{code}",
+            style=info["color"],
             icon_custom_emoji_id=info["emoji_id"],
         )])
-    return InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(rows)
 
-def create_progress(percent: int):
-    filled = int(percent / 100 * 20)
-    empty = 20 - filled
-    progress_bar = "▓" * filled + "░" * empty
-    percent_text = f"{percent:>4}%"
-    return f"{progress_bar}{percent_text}"
+def admin_keyboard() -> InlineKeyboardMarkup:
+    addrs = load_addresses()
+    rows  = []
+    for code, info in CRYPTO_DATA.items():
+        has = bool(addrs.get(code, ""))
+        rows.append([InlineKeyboardButton(
+            text=f"{'✅' if has else '➕'} {code} — {'yangilash' if has else 'kiritish'}",
+            callback_data=f"ae_{code}",
+            style="success" if has else "danger",
+            icon_custom_emoji_id=info["emoji_id"],
+        )])
+    return InlineKeyboardMarkup(rows)
 
-# ==================== /start ====================
+# ═══════════════════════════════════════════════════════
+#  /start
+# ═══════════════════════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Tugmalarni birma-bir chiqarish"""
-    msg = await update.message.reply_text(
-        f"```\n{create_progress(0)}\n```",
-        parse_mode="Markdown"
-    )
+    # conversation state ni tozalash
+    context.user_data.clear()
 
-    crypto_list = list(CRYPTO_DATA.items())
-    keyboard = []
+    items = list(CRYPTO_DATA.items())
+    msg   = await update.message.reply_text(progress_text(0), parse_mode="Markdown")
+    rows  = []
 
-    for i, (code, info) in enumerate(crypto_list):
+    for i, (code, info) in enumerate(items):
         await asyncio.sleep(0.35)
-        keyboard.append([InlineKeyboardButton(
+        rows.append([InlineKeyboardButton(
             text=f"{info['name']} ({code})",
-            callback_data=f"crypto_{code}",
-            style=info.get("color", "primary"),
+            callback_data=f"c_{code}",
+            style=info["color"],
             icon_custom_emoji_id=info["emoji_id"],
         )])
-        percent = int((i + 1) / len(crypto_list) * 100)
+        pct = int((i + 1) / len(items) * 100)
         try:
             await msg.edit_text(
-                f"```\n{create_progress(percent)}\n```",
+                progress_text(pct),
                 parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup(keyboard),
+                reply_markup=InlineKeyboardMarkup(rows),
             )
         except Exception:
-            pass  # MessageNotModified xatoligini e'tiborsiz qoldirish
+            pass
 
-# ==================== CRYPTO TUGMA BOSILGANDA ====================
-async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
+# ═══════════════════════════════════════════════════════
+#  Crypto tugma → manzilni ko'rsatish
+# ═══════════════════════════════════════════════════════
+async def on_crypto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
 
-    crypto = query.data.replace("crypto_", "")
-    info = CRYPTO_DATA.get(crypto)
+    code = q.data[2:]          # "c_BTC" → "BTC"
+    info = CRYPTO_DATA.get(code)
     if not info:
         return
 
-    # Har safar fayldan o'qish
-    addresses = load_addresses()
-    address = addresses.get(crypto, "")
+    addr  = load_addresses().get(code, "")
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
-
-    back_btn = [[InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")]]
-
-    text = (
-        f"{emoji} <b>{info['name']} ({crypto})</b>\n\n"
-        f"<code>{address}</code>"
-        if address else
-        f"{emoji} <b>{info['name']} ({crypto})</b>\n\n"
-        f"❌ Manzil hali kiritilmagan"
+    text  = (
+        f"{emoji} <b>{info['name']} ({code})</b>\n\n<code>{addr}</code>"
+        if addr else
+        f"{emoji} <b>{info['name']} ({code})</b>\n\n❌ Manzil hali kiritilmagan"
     )
-
-    # Agar xabar allaqachon shu matnda bo'lsa xatolik chiqmasligi uchun try/except
+    back = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🏠 Bosh sahifa", callback_data="home", style="primary")
+    ]])
     try:
-        await query.edit_message_text(
-            text,
-            parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup(back_btn),
-        )
+        await q.edit_message_text(text, parse_mode="HTML", reply_markup=back)
     except Exception:
         pass
 
-# ==================== BOSH SAHIFAGA QAYTISH ====================
-async def back_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-
+# ═══════════════════════════════════════════════════════
+#  Bosh sahifa tugmasi
+# ═══════════════════════════════════════════════════════
+async def on_home(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
     try:
-        await query.edit_message_text(
-            f"```\n{create_progress(100)}\n```",
+        await q.edit_message_text(
+            progress_text(100),
             parse_mode="Markdown",
-            reply_markup=build_main_keyboard(),
+            reply_markup=main_keyboard(),
         )
     except Exception:
         pass
 
-# ==================== ADMIN PANEL ====================
-async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ═══════════════════════════════════════════════════════
+#  /admin
+# ═══════════════════════════════════════════════════════
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.message.reply_text("❌ Admin emassiz!")
         return
-
-    # Har safar fayldan o'qish
-    addresses = load_addresses()
-
-    keyboard = []
-    for crypto, info in CRYPTO_DATA.items():
-        addr = addresses.get(crypto, "")
-        btn_text = f"✅ {crypto} — yangilash" if addr else f"➕ {crypto} — kiritish"
-        keyboard.append([InlineKeyboardButton(
-            text=btn_text,
-            callback_data=f"admin_edit_{crypto}",
-            style="success" if addr else "danger",
-            icon_custom_emoji_id=info["emoji_id"],
-        )])
-
+    context.user_data.clear()   # avvalgi kutish holatini tozalash
     await update.message.reply_text(
         "⚙️ <b>Admin Panel</b>\n\nQaysi cryptoni tahrirlash?",
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=admin_keyboard(),
     )
-    return ConversationHandler.END
 
-# ==================== ADMIN: TAHRIRLASH BOSHLASH ====================
-async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
+# ═══════════════════════════════════════════════════════
+#  Admin: tahrirlash tugmasi bosildi  →  manzil so'rash
+# ═══════════════════════════════════════════════════════
+async def on_admin_edit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    if not is_admin(q.from_user.id):
+        await q.answer("❌ Ruxsat yo'q!", show_alert=True)
+        return
+    await q.answer()
 
-    if not is_admin(query.from_user.id):
-        await query.answer("❌ Ruxsat yo'q!", show_alert=True)
-        return ConversationHandler.END
-
-    await query.answer()
-    crypto = query.data.replace("admin_edit_", "")
-
-    # State ni context.user_data ga saqlash (xavfsiz usul)
-    context.user_data["edit_crypto"] = crypto
-
-    info = CRYPTO_DATA.get(crypto, {})
-    current = load_addresses().get(crypto, "")
+    code = q.data[3:]           # "ae_BTC" → "BTC"
+    info = CRYPTO_DATA.get(code, {})
+    cur  = load_addresses().get(code, "")
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
-    current_text = f"\n\nHozirgi: <code>{current}</code>" if current else "\n\nHozirgi: <i>yo'q</i>"
+    cur_line = f"\n\nHozirgi: <code>{cur}</code>" if cur else "\n\nHozirgi: <i>yo'q</i>"
 
+    # Kutish holatini saqlash
+    context.user_data["waiting"] = code
+
+    cancel_btn = InlineKeyboardMarkup([[
+        InlineKeyboardButton("❌ Bekor", callback_data="cancel", style="danger")
+    ]])
     try:
-        await query.edit_message_text(
-            f"{emoji} <b>{crypto}</b> uchun yangi manzilni yuboring:{current_text}",
+        await q.edit_message_text(
+            f"{emoji} <b>{code}</b> uchun yangi manzilni yuboring:{cur_line}",
             parse_mode="HTML",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("❌ Bekor", callback_data="cancel_action", style="danger")
-            ]]),
+            reply_markup=cancel_btn,
         )
     except Exception:
         pass
 
-    return WAITING_ADDRESS
+# ═══════════════════════════════════════════════════════
+#  Admin: bekor qilish
+# ═══════════════════════════════════════════════════════
+async def on_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    context.user_data.clear()
+    try:
+        await q.edit_message_text(
+            "⚙️ <b>Admin Panel</b>\n\nQaysi cryptoni tahrirlash?",
+            parse_mode="HTML",
+            reply_markup=admin_keyboard(),
+        )
+    except Exception:
+        pass
 
-# ==================== ADMIN: MANZILNI QABUL QILISH ====================
-async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not is_admin(update.effective_user.id):
-        return ConversationHandler.END
+# ═══════════════════════════════════════════════════════
+#  Matn xabari keldi  →  faqat admin + waiting holat
+# ═══════════════════════════════════════════════════════
+async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid  = update.effective_user.id
+    code = context.user_data.get("waiting")
 
-    crypto = context.user_data.get("edit_crypto")
-    if not crypto:
-        await update.message.reply_text("❌ Xatolik: qaysi crypto belgilanmagan.")
-        return ConversationHandler.END
+    # Admin emas yoki kutish holati yo'q → e'tiborsiz
+    if not is_admin(uid) or not code:
+        return
 
-    new_address = update.message.text.strip()
-    if not new_address:
-        await update.message.reply_text("❌ Bo'sh manzil qabul qilinmadi.")
-        return WAITING_ADDRESS
+    new_addr = update.message.text.strip()
+    if not new_addr:
+        await update.message.reply_text("❌ Bo'sh manzil. Qaytadan yuboring:")
+        return
 
-    # Fayldan o'qib, yangilab, qayta saqlash
-    addresses = load_addresses()
-    addresses[crypto] = new_address
-    save_addresses(addresses)
+    # Saqlash
+    addrs       = load_addresses()
+    addrs[code] = new_addr
+    save_addresses(addrs)
 
-    context.user_data.pop("edit_crypto", None)
+    # Kutish holatini tozalash
+    context.user_data.clear()
 
-    info = CRYPTO_DATA.get(crypto, {})
+    info  = CRYPTO_DATA.get(code, {})
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
-    # Tasdiqlash
     await update.message.reply_text(
-        f"{emoji} ✅ <b>{crypto}</b> manzili saqlandi!\n\n"
-        f"<code>{new_address}</code>",
+        f"{emoji} ✅ <b>{code}</b> manzili saqlandi!\n\n<code>{new_addr}</code>",
         parse_mode="HTML",
     )
 
-    # Yangilangan holatda admin panelni ko'rsatish
-    fresh = load_addresses()
-
-    keyboard = []
-    for c, inf in CRYPTO_DATA.items():
-        addr = fresh.get(c, "")
-        btn_text = f"✅ {c} — yangilash" if addr else f"➕ {c} — kiritish"
-        keyboard.append([InlineKeyboardButton(
-            text=btn_text,
-            callback_data=f"admin_edit_{c}",
-            style="success" if addr else "danger",
-            icon_custom_emoji_id=inf["emoji_id"],
-        )])
-
+    # Yangilangan admin panelni ko'rsat
     await update.message.reply_text(
         "⚙️ <b>Admin Panel</b>\n\nQaysi cryptoni tahrirlash?",
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=admin_keyboard(),
     )
 
-    return ConversationHandler.END
-
-# ==================== BEKOR QILISH ====================
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.pop("edit_crypto", None)
-
-    if update.callback_query:
-        await update.callback_query.answer()
-        try:
-            await update.callback_query.edit_message_text("❌ Bekor qilindi.")
-        except Exception:
-            pass
-    elif update.message:
-        await update.message.reply_text("❌ Bekor qilindi.")
-
-    return ConversationHandler.END
-
-# ==================== MAIN ====================
+# ═══════════════════════════════════════════════════════
+#  MAIN
+# ═══════════════════════════════════════════════════════
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # ConversationHandler — admin tahrirlash uchun
-    conv_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler("admin", admin_panel),
-            CallbackQueryHandler(admin_edit_callback, pattern=r"^admin_edit_"),
-        ],
-        states={
-            WAITING_ADDRESS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_address),
-                CallbackQueryHandler(cancel, pattern=r"^cancel_action$"),
-            ],
-        },
-        fallbacks=[
-            CommandHandler("cancel", cancel),
-            CommandHandler("start", start),
-            CallbackQueryHandler(cancel, pattern=r"^cancel_action$"),
-        ],
-        per_message=False,
-        per_chat=True,
-        per_user=True,
-        allow_reentry=True,
-    )
-
-    # Handler tartib muhim: ConversationHandler birinchi!
-    app.add_handler(conv_handler)
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("cancel", cancel))
-    app.add_handler(CallbackQueryHandler(crypto_callback, pattern=r"^crypto_"))
-    app.add_handler(CallbackQueryHandler(back_start, pattern=r"^back_start$"))
+    app.add_handler(CommandHandler("admin", admin))
+
+    app.add_handler(CallbackQueryHandler(on_crypto,     pattern=r"^c_"))
+    app.add_handler(CallbackQueryHandler(on_home,       pattern=r"^home$"))
+    app.add_handler(CallbackQueryHandler(on_admin_edit, pattern=r"^ae_"))
+    app.add_handler(CallbackQueryHandler(on_cancel,     pattern=r"^cancel$"))
+
+    # Barcha matn xabarlari — ConversationHandler YO'Q
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
 
     print("🤖 Bot ishga tushdi!")
     app.run_polling(drop_pending_updates=True)
