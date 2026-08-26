@@ -69,10 +69,12 @@ def build_main_keyboard() -> InlineKeyboardMarkup:
         )])
     return InlineKeyboardMarkup(keyboard)
 
-def create_progress(percent: int) -> str:
+def create_progress(percent: int):
     filled = int(percent / 100 * 20)
     empty = 20 - filled
-    return "▓" * filled + "░" * empty + f"{percent:>5}%"
+    progress_bar = "▓" * filled + "░" * empty
+    percent_text = f"{percent:>4}%"
+    return f"{progress_bar}{percent_text}"
 
 # ==================== /start ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
