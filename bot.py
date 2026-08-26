@@ -113,8 +113,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==================== CRYPTO TUGMA BOSILGANDA ====================
 async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-
-    # Duplicate callback oldini olish
     await query.answer()
 
     crypto = query.data.replace("crypto_", "")
@@ -122,7 +120,9 @@ async def crypto_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not info:
         return
 
-    address = crypto_addresses.get(crypto, "")
+    # Har safar fayldan o'qish
+    addresses = load_addresses()
+    address = addresses.get(crypto, "")
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
 
     back_btn = [[InlineKeyboardButton("🏠 Bosh sahifa", callback_data="back_start", style="primary")]]
@@ -165,13 +165,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Admin emassiz!")
         return
 
-    # Har safar fayldan qayta yuklash — xotira va fayl farq qilmasligi uchun
-    global crypto_addresses
-    crypto_addresses = load_addresses()
+    # Har safar fayldan o'qish
+    addresses = load_addresses()
 
     keyboard = []
     for crypto, info in CRYPTO_DATA.items():
-        addr = crypto_addresses.get(crypto, "")
+        addr = addresses.get(crypto, "")
         btn_text = f"✅ {crypto} — yangilash" if addr else f"➕ {crypto} — kiritish"
         keyboard.append([InlineKeyboardButton(
             text=btn_text,
@@ -202,7 +201,7 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     context.user_data["edit_crypto"] = crypto
 
     info = CRYPTO_DATA.get(crypto, {})
-    current = crypto_addresses.get(crypto, "")
+    current = load_addresses().get(crypto, "")
     emoji = f'<tg-emoji emoji-id="{info["emoji_id"]}">⬛</tg-emoji>'
     current_text = f"\n\nHozirgi: <code>{current}</code>" if current else "\n\nHozirgi: <i>yo'q</i>"
 
@@ -221,8 +220,6 @@ async def admin_edit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # ==================== ADMIN: MANZILNI QABUL QILISH ====================
 async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global crypto_addresses
-
     if not is_admin(update.effective_user.id):
         return ConversationHandler.END
 
@@ -236,11 +233,10 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Bo'sh manzil qabul qilinmadi.")
         return WAITING_ADDRESS
 
-    # Saqlash
-    crypto_addresses[crypto] = new_address
-    save_addresses(crypto_addresses)
-    # Fayldan qayta yuklab xotirani sinxronlash
-    crypto_addresses = load_addresses()
+    # Fayldan o'qib, yangilab, qayta saqlash
+    addresses = load_addresses()
+    addresses[crypto] = new_address
+    save_addresses(addresses)
 
     context.user_data.pop("edit_crypto", None)
 
@@ -255,10 +251,11 @@ async def receive_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     # Yangilangan holatda admin panelni ko'rsatish
+    fresh = load_addresses()
 
     keyboard = []
     for c, inf in CRYPTO_DATA.items():
-        addr = crypto_addresses.get(c, "")
+        addr = fresh.get(c, "")
         btn_text = f"✅ {c} — yangilash" if addr else f"➕ {c} — kiritish"
         keyboard.append([InlineKeyboardButton(
             text=btn_text,
