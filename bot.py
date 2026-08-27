@@ -1,4 +1,6 @@
+import json
 import logging
+import os
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -23,10 +25,55 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# --- Admin sozlamalari ---
+ADMIN_IDS = {8758410535}  # <-- shu ro'yxatga boshqa adminlarni ham qo'shishingiz mumkin
+
+CONFIG_FILE = "config.json"
+
+# --- Tugma kalitlari va ularning admin panelida ko'rinadigan nomlari ---
+BUTTON_KEYS = ["exchange", "rate", "settings", "support"]
+BUTTON_ADMIN_LABELS = {
+    "exchange": "💱 Valyuta ayirboshlash",
+    "rate": "📊 Kurs",
+    "settings": "⚙️ Sozlamalar",
+    "support": "☎️ Aloqa",
+}
+
+# --- Mavjud ranglar (Telegram Bot API 9.4 orqali qo'llab-quvvatlanadi) ---
+STYLE_OPTIONS = [
+    ("default", "⚪ Standart"),
+    ("primary", "🔵 Ko'k (Primary)"),
+    ("success", "🟢 Yashil (Success)"),
+    ("danger", "🔴 Qizil (Danger)"),
+]
+STYLE_LABELS = dict(STYLE_OPTIONS)
+
+# --- Config faylini yuklash / saqlash ---
+def load_config() -> dict:
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            logger.exception("Config faylini o'qishda xatolik")
+    return {"button_styles": {key: "default" for key in BUTTON_KEYS}}
+
+def save_config(config: dict) -> None:
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+def get_button_style(key: str) -> str:
+    config = load_config()
+    return config.get("button_styles", {}).get(key, "default")
+
+def set_button_style(key: str, style: str) -> None:
+    config = load_config()
+    config.setdefault("button_styles", {})[key] = style
+    save_config(config)
+
 # --- Matnlar (har bir tilda) ---
 TEXTS = {
     "uz_latin": {
-        "choose_lang": "🌐 Tilni tanlang / Тилни танланг:",
         "ask_phone": "Xush kelibsiz! Botdan foydalanishni boshlash uchun telefon raqamingizni yuboring:",
         "phone_btn": "📱 Telefon raqamni yuborish",
         "phone_received": "Raqamingiz qabul qilindi. Iltimos, ism va familiyangizni kiriting:",
@@ -45,7 +92,6 @@ TEXTS = {
         },
     },
     "uz_cyrillic": {
-        "choose_lang": "🌐 Tilni tanlang / Тилни танланг:",
         "ask_phone": "Хуш келибсиз! Ботдан фойдаланишни бошлаш учун телефон рақамингизни юборинг:",
         "phone_btn": "📱 Телефон рақамни юбориш",
         "phone_received": "Рақамингиз қабул қилинди. Илтимос, исм ва фамилиянгизни киритинг:",
@@ -81,13 +127,20 @@ def phone_keyboard(lang: str) -> ReplyKeyboardMarkup:
     keyboard = [[KeyboardButton(btn_text, request_contact=True)]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
 
+# --- Rangga mos KeyboardButton yaratish ---
+def styled_button(text: str, key: str) -> KeyboardButton:
+    style = get_button_style(key)
+    if style and style != "default":
+        return KeyboardButton(text, style=style)
+    return KeyboardButton(text)
+
 # --- Asosiy menyu klaviaturasi (reply) ---
 def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     m = TEXTS[lang]["menu"]
     keyboard = [
-        [KeyboardButton(m["exchange"])],
-        [KeyboardButton(m["support"]), KeyboardButton(m["rate"])],
-        [KeyboardButton(m["settings"])],
+        [styled_button(m["exchange"], "exchange")],
+        [styled_button(m["support"], "support"), styled_button(m["rate"], "rate")],
+        [styled_button(m["settings"], "settings")],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
@@ -110,13 +163,8 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not selected:
         return
 
-    # Tilni saqlash
     context.user_data["lang"] = selected
-
-    # Inline xabarni o'chirish (tugmalarsiz qoldiramiz)
     await query.edit_message_reply_markup(reply_markup=None)
-
-    # Telefon so'rash
     await query.message.reply_text(
         TEXTS[selected]["ask_phone"],
         reply_markup=phone_keyboard(selected),
@@ -127,10 +175,7 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     lang = context.user_data.get("lang", "uz_latin")
     phone = update.message.contact.phone_number
 
-    # Raqamni saqlash
     context.user_data["phone"] = phone
-
-    # Ism-familiya kutilayotganini belgilash
     context.user_data["awaiting_name"] = True
 
     await update.message.reply_text(
@@ -150,7 +195,6 @@ async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     lang = context.user_data.get("lang", "uz_latin")
     full_name = update.message.text.strip()
 
-    # Ism-familiyani saqlash
     context.user_data["full_name"] = full_name
     context.user_data["awaiting_name"] = False
 
@@ -177,6 +221,93 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     else:
         pass
 
+# =========================================================
+# ============ ADMIN PANEL (tugma ranglari) ==============
+# =========================================================
+
+def is_admin(user_id: int) -> bool:
+    return user_id in ADMIN_IDS
+
+# --- Admin panel asosiy ro'yxati ---
+def admin_panel_keyboard() -> InlineKeyboardMarkup:
+    rows = []
+    for key in BUTTON_KEYS:
+        current_style = get_button_style(key)
+        style_emoji = STYLE_LABELS.get(current_style, "⚪ Standart").split(" ")[0]
+        label = f"{style_emoji} {BUTTON_ADMIN_LABELS[key]}"
+        rows.append([InlineKeyboardButton(label, callback_data=f"admin_pick_{key}")])
+    return InlineKeyboardMarkup(rows)
+
+# --- Bitta tugma uchun rang tanlash klaviaturasi ---
+def color_choice_keyboard(key: str) -> InlineKeyboardMarkup:
+    rows = []
+    for style_value, style_label in STYLE_OPTIONS:
+        rows.append([InlineKeyboardButton(style_label, callback_data=f"admin_set_{key}_{style_value}")])
+    rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_back")])
+    return InlineKeyboardMarkup(rows)
+
+# --- /admin komandasi ---
+async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    if not is_admin(user_id):
+        await update.message.reply_text("⛔ Sizda admin panelga kirish huquqi yo'q.")
+        return
+
+    await update.message.reply_text(
+        "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
+        reply_markup=admin_panel_keyboard(),
+    )
+
+# --- Admin panel callback'lari ---
+async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    if not is_admin(user_id):
+        await query.answer("⛔ Ruxsat yo'q.", show_alert=True)
+        return
+
+    await query.answer()
+    data = query.data
+
+    if data == "admin_back":
+        await query.edit_message_text(
+            "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
+            reply_markup=admin_panel_keyboard(),
+        )
+        return
+
+    if data.startswith("admin_pick_"):
+        key = data.replace("admin_pick_", "")
+        if key not in BUTTON_KEYS:
+            return
+        current_style = get_button_style(key)
+        current_label = STYLE_LABELS.get(current_style, "⚪ Standart")
+        await query.edit_message_text(
+            f"🎨 {BUTTON_ADMIN_LABELS[key]}\n"
+            f"Joriy rang: {current_label}\n\n"
+            f"Yangi rangni tanlang:",
+            reply_markup=color_choice_keyboard(key),
+        )
+        return
+
+    if data.startswith("admin_set_"):
+        # format: admin_set_<key>_<style>
+        remainder = data.replace("admin_set_", "")
+        # key hech qachon "_" bo'lmaydi, style ham bitta so'z - shuning uchun rsplit ishlatamiz
+        key, style = remainder.rsplit("_", 1)
+        if key not in BUTTON_KEYS or style not in STYLE_LABELS:
+            return
+
+        set_button_style(key, style)
+
+        await query.answer(f"✅ {BUTTON_ADMIN_LABELS[key]} rangi o'zgartirildi!", show_alert=False)
+        await query.edit_message_text(
+            "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
+            reply_markup=admin_panel_keyboard(),
+        )
+        return
+
 # --- Asosiy funksiya ---
 def main() -> None:
     TOKEN = "8749302193:AAFOeDLDoimdjHSVDO728nAtsBngqncy8Uk"  # <-- shu yerga o'z tokeningizni kiriting
@@ -184,6 +315,8 @@ def main() -> None:
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(language_callback, pattern="^lang_"))
     app.add_handler(MessageHandler(filters.CONTACT, contact_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
