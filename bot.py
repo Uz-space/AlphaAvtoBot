@@ -35,13 +35,13 @@ TEXTS = {
             "exchange": "💱 Valyuta ayirboshlash",
             "rate": "📊 Kurs",
             "settings": "⚙️ Sozlamalar",
-            "support": "🆘 Qo'llab-quvvatlash",
+            "support": "☎️ Aloqa",
         },
         "menu_replies": {
             "exchange": "💱 Valyuta ayirboshlash bo'limi tez orada ishga tushadi.",
             "rate": "📊 Kurs bo'limi tez orada ishga tushadi.",
             "settings": "⚙️ Sozlamalar bo'limi tez orada ishga tushadi.",
-            "support": "🆘 Qo'llab-quvvatlash bo'limi tez orada ishga tushadi.",
+            "support": "☎️ Aloqa bo'limi tez orada ishga tushadi.",
         },
     },
     "uz_cyrillic": {
@@ -54,13 +54,13 @@ TEXTS = {
             "exchange": "💱 Валюта айирбошлаш",
             "rate": "📊 Курс",
             "settings": "⚙️ Созламалар",
-            "support": "🆘 Қўллаб-қувватлаш",
+            "support": "☎️ Алоқа",
         },
         "menu_replies": {
             "exchange": "💱 Валюта айирбошлаш бўлими тез орада ишга тушади.",
             "rate": "📊 Курс бўлими тез орада ишга тушади.",
             "settings": "⚙️ Созламалар бўлими тез орада ишга тушади.",
-            "support": "🆘 Қўллаб-қувватлаш бўлими тез орада ишга тушади.",
+            "support": "☎️ Алоқа бўлими тез орада ишга тушади.",
         },
     },
 }
