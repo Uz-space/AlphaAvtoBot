@@ -243,6 +243,9 @@ TEXTS = {
         "exchange_header": "🔀 Almashuv: qaysi tomondan boshlaysiz (🔷 bering / 🔶 oling):",
         "exchange_empty": "Hozircha valyutalar qo'shilmagan. Admin tez orada qo'shadi.",
         "exchange_selected": "✅ Tanlandi: {name}",
+        "support_prompt": "✍️ Xabaringizni yozing, u to'g'ridan-to'g'ri operatorga yuboriladi:",
+        "support_sent": "✅ Xabaringiz yuborildi! Tez orada javob beramiz.",
+        "support_admin_reply_prefix": "💬 Operator javobi:\n\n",
     },
     "uz_cyrillic": {
         "ask_phone": "Хуш келибсиз! Ботдан фойдаланишни бошлаш учун телефон рақамингизни юборинг:",
@@ -264,6 +267,9 @@ TEXTS = {
         "exchange_header": "🔀 Алмашув: қайси томондан бошлайсиз (🔷 беринг / 🔶 олинг):",
         "exchange_empty": "Ҳозирча валюталар қўшилмаган. Админ тез орада қўшади.",
         "exchange_selected": "✅ Танланди: {name}",
+        "support_prompt": "✍️ Хабарингизни ёзинг, у тўғридан-тўғри операторга юборилади:",
+        "support_sent": "✅ Хабарингиз юборилди! Тез орада жавоб берамиз.",
+        "support_admin_reply_prefix": "💬 Оператор жавоби:\n\n",
     },
 }
 
@@ -301,7 +307,7 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # --- Valyuta almashuv klaviaturasi (inline, 2 ustunli: bering / oling) ---
-def exchange_keyboard() -> InlineKeyboardMarkup:
+def exchange_keyboard(lang: str) -> InlineKeyboardMarkup:
     currencies = load_currencies()
     rows = []
     for currency in currencies:
@@ -313,6 +319,9 @@ def exchange_keyboard() -> InlineKeyboardMarkup:
             InlineKeyboardButton(f"🔷 {currency['name']}", callback_data=f"exch_give_{currency['id']}", **give_kwargs),
             InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **take_kwargs),
         ])
+
+    home_label = "🏠 Bosh menyu" if lang == "uz_latin" else "🏠 Бош меню"
+    rows.append([InlineKeyboardButton(home_label, callback_data="exch_home")])
     return InlineKeyboardMarkup(rows)
 
 # --- /start komandasi ---
@@ -378,10 +387,14 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 # --- Matnli xabarlarni yo'naltirish (ism, valyuta nomi yoki menyu) ---
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if context.user_data.get("awaiting_currency_name"):
+    if is_admin(update.effective_user.id) and context.user_data.get("awaiting_reply_to"):
+        await admin_reply_handler(update, context)
+    elif context.user_data.get("awaiting_currency_name"):
         await currency_name_handler(update, context)
     elif context.user_data.get("awaiting_name"):
         await name_handler(update, context)
+    elif context.user_data.get("awaiting_support_message"):
+        await support_message_handler(update, context)
     else:
         await menu_handler(update, context)
 
@@ -400,6 +413,65 @@ async def currency_name_handler(update: Update, context: ContextTypes.DEFAULT_TY
         "💱 Valyutalar ro'yxati:",
         reply_markup=admin_currencies_keyboard(),
     )
+
+# --- Foydalanuvchi: aloqa xabarini qabul qilish va adminga yuborish ---
+async def support_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    context.user_data["awaiting_support_message"] = False
+    lang = context.user_data.get("lang", "uz_latin")
+    message_text = update.message.text.strip()
+
+    if not message_text:
+        await update.message.reply_text(TEXTS[lang]["support_prompt"])
+        context.user_data["awaiting_support_message"] = True
+        return
+
+    user = update.effective_user
+    user_id = user.id
+    saved_user = get_user(user_id) or {}
+    full_name = saved_user.get("full_name") or user.full_name or "Noma'lum"
+    phone = saved_user.get("phone", "—")
+    username = f"@{user.username}" if user.username else "—"
+
+    admin_text = (
+        f"📩 Yangi xabar (Aloqa)\n\n"
+        f"👤 Ism: {full_name}\n"
+        f"📱 Tel: {phone}\n"
+        f"🔗 Username: {username}\n"
+        f"🆔 ID: {user_id}\n\n"
+        f"💬 Xabar:\n{message_text}"
+    )
+    reply_keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("💬 Javob yozish", callback_data=f"admin_reply_{user_id}")]
+    ])
+
+    for admin_id in ADMIN_IDS:
+        try:
+            await context.bot.send_message(chat_id=admin_id, text=admin_text, reply_markup=reply_keyboard)
+        except Exception:
+            logger.exception(f"Admin {admin_id}ga xabar yuborishda xatolik")
+
+    await update.message.reply_text(TEXTS[lang]["support_sent"])
+
+# --- Admin: foydalanuvchiga javob yozish ---
+async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    target_user_id = context.user_data.get("awaiting_reply_to")
+    context.user_data["awaiting_reply_to"] = None
+    reply_text = update.message.text.strip()
+
+    if not target_user_id or not reply_text:
+        await update.message.reply_text("Xatolik: javob yuborilmadi.")
+        return
+
+    target_user = get_user(target_user_id)
+    target_lang = target_user.get("lang", "uz_latin") if target_user else "uz_latin"
+    prefix = TEXTS[target_lang]["support_admin_reply_prefix"]
+
+    try:
+        await context.bot.send_message(chat_id=target_user_id, text=f"{prefix}{reply_text}")
+        await update.message.reply_text("✅ Javob yuborildi.")
+    except Exception:
+        logger.exception(f"Userga ({target_user_id}) javob yuborishda xatolik")
+        await update.message.reply_text("❌ Xatolik: foydalanuvchiga yuborib bo'lmadi (botni bloklagan bo'lishi mumkin).")
 
 # --- Ism-familiya qabul qilish ---
 async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -463,8 +535,14 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             return
         await update.message.reply_text(
             TEXTS[matched_lang]["exchange_header"],
-            reply_markup=exchange_keyboard(),
+            reply_markup=exchange_keyboard(matched_lang),
         )
+        return
+
+    # "Aloqa" alohida - foydalanuvchidan xabar kutamiz, keyin adminga yuboramiz
+    if matched_key == "support":
+        context.user_data["awaiting_support_message"] = True
+        await update.message.reply_text(TEXTS[matched_lang]["support_prompt"])
         return
 
     reply_text = TEXTS[matched_lang]["menu_replies"][matched_key]
@@ -479,6 +557,20 @@ async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         lang = saved_user.get("lang", "uz_latin") if saved_user else "uz_latin"
 
     data = query.data
+
+    if data == "exch_home":
+        await query.answer()
+        # Inline klaviaturani olib tashlaymiz va asosiy (reply) menyuni qaytaramiz
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        await query.message.reply_text(
+            TEXTS[lang]["name_received"],
+            reply_markup=main_menu_keyboard(lang),
+        )
+        return
+
     currencies = load_currencies()
 
     currency_id = None
@@ -616,6 +708,16 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "🛠 Admin panel\n\nBo'limni tanlang:",
             reply_markup=admin_home_keyboard(),
         )
+        return
+
+    if data.startswith("admin_reply_"):
+        target_user_id_str = data.replace("admin_reply_", "")
+        if not target_user_id_str.isdigit():
+            await query.answer()
+            return
+        context.user_data["awaiting_reply_to"] = int(target_user_id_str)
+        await query.answer()
+        await query.message.reply_text("✍️ Javobingizni yozing:")
         return
 
     if data == "admin_colors":
