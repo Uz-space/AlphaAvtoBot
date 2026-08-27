@@ -37,6 +37,12 @@ TEXTS = {
             "settings": "⚙️ Sozlamalar",
             "support": "🆘 Qo'llab-quvvatlash",
         },
+        "menu_replies": {
+            "exchange": "💱 Valyuta ayirboshlash bo'limi tez orada ishga tushadi.",
+            "rate": "📊 Kurs bo'limi tez orada ishga tushadi.",
+            "settings": "⚙️ Sozlamalar bo'limi tez orada ishga tushadi.",
+            "support": "🆘 Qo'llab-quvvatlash bo'limi tez orada ishga tushadi.",
+        },
     },
     "uz_cyrillic": {
         "choose_lang": "🌐 Tilni tanlang / Тилни танланг:",
@@ -49,6 +55,12 @@ TEXTS = {
             "rate": "📊 Курс",
             "settings": "⚙️ Созламалар",
             "support": "🆘 Қўллаб-қувватлаш",
+        },
+        "menu_replies": {
+            "exchange": "💱 Валюта айирбошлаш бўлими тез орада ишга тушади.",
+            "rate": "📊 Курс бўлими тез орада ишга тушади.",
+            "settings": "⚙️ Созламалар бўлими тез орада ишга тушади.",
+            "support": "🆘 Қўллаб-қувватлаш бўлими тез орада ишга тушади.",
         },
     },
 }
@@ -94,7 +106,6 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     }
 
     selected = lang_map.get(query.data)
-    logger.info(f"Callback data: {query.data} -> selected: {selected}")
     if not selected:
         return
 
@@ -152,15 +163,16 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     lang = context.user_data.get("lang", "uz_latin")
     text = update.message.text
     m = TEXTS[lang]["menu"]
+    r = TEXTS[lang]["menu_replies"]
 
     if text == m["exchange"]:
-        await update.message.reply_text("💱 Valyuta ayirboshlash bo'limi tez orada ishga tushadi.")
+        await update.message.reply_text(r["exchange"])
     elif text == m["rate"]:
-        await update.message.reply_text("📊 Kurs bo'limi tez orada ishga tushadi.")
+        await update.message.reply_text(r["rate"])
     elif text == m["settings"]:
-        await update.message.reply_text("⚙️ Sozlamalar bo'limi tez orada ishga tushadi.")
+        await update.message.reply_text(r["settings"])
     elif text == m["support"]:
-        await update.message.reply_text("🆘 Qo'llab-quvvatlash bo'limi tez orada ishga tushadi.")
+        await update.message.reply_text(r["support"])
     else:
         pass
 
