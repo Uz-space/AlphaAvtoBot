@@ -213,7 +213,12 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 # --- Telefon raqam qabul qilish ---
 async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = context.user_data.get("lang", "uz_latin")
+    lang = context.user_data.get("lang")
+    if not lang:
+        saved_user = get_user(update.effective_user.id)
+        lang = saved_user.get("lang", "uz_latin") if saved_user else "uz_latin"
+        context.user_data["lang"] = lang
+
     phone = update.message.contact.phone_number
 
     context.user_data["phone"] = phone
@@ -233,7 +238,12 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 # --- Ism-familiya qabul qilish ---
 async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = context.user_data.get("lang", "uz_latin")
+    lang = context.user_data.get("lang")
+    if not lang:
+        saved_user = get_user(update.effective_user.id)
+        lang = saved_user.get("lang", "uz_latin") if saved_user else "uz_latin"
+        context.user_data["lang"] = lang
+
     full_name = update.message.text.strip()
     phone = context.user_data.get("phone", "")
 
@@ -251,21 +261,37 @@ async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 # --- Asosiy menyu tugmalari ---
 async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    lang = context.user_data.get("lang", "uz_latin")
     text = update.message.text
-    m = TEXTS[lang]["menu"]
-    r = TEXTS[lang]["menu_replies"]
 
-    if text == m["exchange"]:
-        await update.message.reply_text(r["exchange"])
-    elif text == m["rate"]:
-        await update.message.reply_text(r["rate"])
-    elif text == m["settings"]:
-        await update.message.reply_text(r["settings"])
-    elif text == m["support"]:
-        await update.message.reply_text(r["support"])
-    else:
-        pass
+    # Foydalanuvchi tilini aniqlash (sessiya yo'qolgan bo'lsa faylga qaraymiz)
+    lang = context.user_data.get("lang")
+    if not lang:
+        saved_user = get_user(update.effective_user.id)
+        lang = saved_user.get("lang", "uz_latin") if saved_user else "uz_latin"
+        context.user_data["lang"] = lang
+
+    # Bosilgan tugma matnini ikkala tildan ham qidiramiz
+    # (bu ekrandagi tugma tili bilan sessiyadagi til mos kelmasa ham ishlashini kafolatlaydi)
+    matched_key = None
+    matched_lang = lang
+    for lng, lng_texts in TEXTS.items():
+        for key, value in lng_texts["menu"].items():
+            if value == text:
+                matched_key = key
+                matched_lang = lng
+                break
+        if matched_key:
+            break
+
+    if not matched_key:
+        return  # Menyuga tegishli bo'lmagan matn
+
+    # Agar tugma matni sessiyadagi tildan farq qilsa, tilni yangilaymiz
+    if matched_lang != lang:
+        context.user_data["lang"] = matched_lang
+
+    reply_text = TEXTS[matched_lang]["menu_replies"][matched_key]
+    await update.message.reply_text(reply_text)
 
 # =========================================================
 # ============ ADMIN PANEL (tugma ranglari) ==============
