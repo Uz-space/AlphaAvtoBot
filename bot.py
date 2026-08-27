@@ -538,8 +538,12 @@ def admin_currencies_keyboard() -> InlineKeyboardMarkup:
         take_emoji = STYLE_LABELS.get(take_style, "⚪ Standart").split(" ")[0]
         rows.append([
             InlineKeyboardButton(
-                f"{give_emoji}🔷{take_emoji}🔶 {currency['name']}",
-                callback_data=f"admin_curr_pick_{currency['id']}",
+                f"{give_emoji} 🔷 {currency['name']}",
+                callback_data=f"admin_curr_side_{currency['id']}_give",
+            ),
+            InlineKeyboardButton(
+                f"{take_emoji} 🔶 {currency['name']}",
+                callback_data=f"admin_curr_side_{currency['id']}_take",
             ),
             InlineKeyboardButton("❌", callback_data=f"admin_curr_del_{currency['id']}"),
         ])
@@ -547,21 +551,12 @@ def admin_currencies_keyboard() -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton("⬅️ Admin menyu", callback_data="admin_home")])
     return InlineKeyboardMarkup(rows)
 
-# --- Bitta valyuta uchun tomon tanlash (bering / oling) ---
-def currency_side_keyboard(currency_id: str, currency_name: str) -> InlineKeyboardMarkup:
-    keyboard = [
-        [InlineKeyboardButton("🔷 Berish rangi", callback_data=f"admin_curr_side_{currency_id}_give")],
-        [InlineKeyboardButton("🔶 Olish rangi", callback_data=f"admin_curr_side_{currency_id}_take")],
-        [InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_curr_home")],
-    ]
-    return InlineKeyboardMarkup(keyboard)
-
 # --- Bitta valyuta + tomon uchun rang tanlash klaviaturasi ---
 def currency_color_choice_keyboard(currency_id: str, side: str) -> InlineKeyboardMarkup:
     rows = []
     for style_value, style_label in STYLE_OPTIONS:
         rows.append([InlineKeyboardButton(style_label, callback_data=f"admin_curr_set_{currency_id}_{side}_{style_value}")])
-    rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data=f"admin_curr_pick_{currency_id}")])
+    rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_curr_home")])
     return InlineKeyboardMarkup(rows)
 
 # --- Bitta tugma uchun rang tanlash klaviaturasi ---
@@ -689,20 +684,6 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text(text, reply_markup=admin_currencies_keyboard())
         return
 
-    if data.startswith("admin_curr_pick_"):
-        currency_id = data.replace("admin_curr_pick_", "")
-        currencies = load_currencies()
-        currency = next((c for c in currencies if c["id"] == currency_id), None)
-        if not currency:
-            await query.answer("Topilmadi", show_alert=True)
-            return
-        await query.answer()
-        await query.edit_message_text(
-            f"🎨 {currency['name']}\n\nQaysi tomon rangini o'zgartirmoqchisiz?",
-            reply_markup=currency_side_keyboard(currency_id, currency["name"]),
-        )
-        return
-
     if data.startswith("admin_curr_side_"):
         # format: admin_curr_side_<id>_<give|take>
         remainder = data.replace("admin_curr_side_", "")
@@ -742,17 +723,8 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.answer("✅ Rang o'zgartirildi" if ok else "Topilmadi")
 
         currencies = load_currencies()
-        currency = next((c for c in currencies if c["id"] == currency_id), None)
-        if currency:
-            await query.edit_message_text(
-                f"🎨 {currency['name']}\n\nQaysi tomon rangini o'zgartirmoqchisiz?",
-                reply_markup=currency_side_keyboard(currency_id, currency["name"]),
-            )
-        else:
-            await query.edit_message_text(
-                "💱 Valyutalar ro'yxati:",
-                reply_markup=admin_currencies_keyboard(),
-            )
+        text = "💱 Valyutalar ro'yxati:" if currencies else "💱 Valyutalar ro'yxati hozircha bo'sh."
+        await query.edit_message_text(text, reply_markup=admin_currencies_keyboard())
         return
 
     if data.startswith("admin_curr_del_"):
