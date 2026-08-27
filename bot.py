@@ -86,7 +86,7 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     m = TEXTS[lang]["menu"]
     keyboard = [
         [KeyboardButton(m["exchange"])],
-        [KeyboardButton(m["rate"]), KeyboardButton(m["support"])],
+        [KeyboardButton(m["support"]), KeyboardButton(m["rate"])],
         [KeyboardButton(m["settings"])],
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
