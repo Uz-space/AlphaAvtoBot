@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import threading
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -25,11 +26,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# --- Bot fayli joylashgan papka (fayllar doim shu yerda saqlanadi) ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- Admin sozlamalari ---
 ADMIN_IDS = {8758410535}  # <-- shu ro'yxatga boshqa adminlarni ham qo'shishingiz mumkin
 
-CONFIG_FILE = "config.json"
-USERS_FILE = "users.json"
+CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+
+# --- Fayllarga bir vaqtda ko'p yozilib qolmasligi uchun qulflar ---
+# (bir necha foydalanuvchi bir soniyada ro'yxatdan o'tsa ham, ma'lumot
+# bir-birining ustidan yozilib ketmasligini kafolatlaydi)
+_config_lock = threading.Lock()
+_users_lock = threading.Lock()
 
 # --- Tugma kalitlari va ularning admin panelida ko'rinadigan nomlari ---
 BUTTON_KEYS = ["exchange", "rate", "settings", "support"]
@@ -51,49 +61,81 @@ STYLE_LABELS = dict(STYLE_OPTIONS)
 
 # --- Config faylini yuklash / saqlash ---
 def load_config() -> dict:
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            logger.exception("Config faylini o'qishda xatolik")
-    return {"button_styles": {key: "default" for key in BUTTON_KEYS}}
+    with _config_lock:
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                logger.exception("Config faylini o'qishda xatolik")
+        return {"button_styles": {key: "default" for key in BUTTON_KEYS}}
 
 def save_config(config: dict) -> None:
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
+    with _config_lock:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
 
 def get_button_style(key: str) -> str:
     config = load_config()
     return config.get("button_styles", {}).get(key, "default")
 
 def set_button_style(key: str, style: str) -> None:
-    config = load_config()
-    config.setdefault("button_styles", {})[key] = style
-    save_config(config)
+    # O'qish va yozish orasida boshqa jarayon kirib qolmasligi uchun
+    # ikkalasini bitta qulf ostida bajaramiz
+    with _config_lock:
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+            except Exception:
+                logger.exception("Config faylini o'qishda xatolik")
+                config = {"button_styles": {k: "default" for k in BUTTON_KEYS}}
+        else:
+            config = {"button_styles": {k: "default" for k in BUTTON_KEYS}}
+
+        config.setdefault("button_styles", {})[key] = style
+
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
 
 # --- Ro'yxatdan o'tgan foydalanuvchilarni yuklash / saqlash ---
 def load_users() -> dict:
-    if os.path.exists(USERS_FILE):
-        try:
-            with open(USERS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            logger.exception("Users faylini o'qishda xatolik")
-    return {}
+    with _users_lock:
+        if os.path.exists(USERS_FILE):
+            try:
+                with open(USERS_FILE, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                logger.exception("Users faylini o'qishda xatolik")
+        return {}
 
 def save_users(users: dict) -> None:
-    with open(USERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
+    with _users_lock:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
 
 def get_user(user_id: int) -> dict | None:
     users = load_users()
     return users.get(str(user_id))
 
 def save_user(user_id: int, lang: str, phone: str, full_name: str) -> None:
-    users = load_users()
-    users[str(user_id)] = {"lang": lang, "phone": phone, "full_name": full_name}
-    save_users(users)
+    # O'qish va yozish orasida boshqa foydalanuvchi kirib qolmasligi uchun
+    # ikkalasini bitta qulf ostida bajaramiz
+    with _users_lock:
+        if os.path.exists(USERS_FILE):
+            try:
+                with open(USERS_FILE, "r", encoding="utf-8") as f:
+                    users = json.load(f)
+            except Exception:
+                logger.exception("Users faylini o'qishda xatolik")
+                users = {}
+        else:
+            users = {}
+
+        users[str(user_id)] = {"lang": lang, "phone": phone, "full_name": full_name}
+
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2)
 
 # --- Matnlar (har bir tilda) ---
 TEXTS = {
