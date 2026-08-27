@@ -43,7 +43,7 @@ _config_lock = threading.Lock()
 _users_lock = threading.Lock()
 
 # --- Tugma kalitlari va ularning admin panelida ko'rinadigan nomlari ---
-BUTTON_KEYS = ["exchange", "rate", "settings", "support"]
+BUTTON_KEYS = ["exchange", "support", "rate", "settings"]
 BUTTON_ADMIN_LABELS = {
     "exchange": "💱 Valyuta ayirboshlash",
     "rate": "📊 Kurs",
