@@ -168,7 +168,7 @@ def add_currency(name: str) -> dict:
         else:
             currencies = []
 
-        new_entry = {"id": uuid.uuid4().hex[:8], "name": name}
+        new_entry = {"id": uuid.uuid4().hex[:8], "name": name, "style": "default"}
         currencies.append(new_entry)
         _save_currencies_unlocked(currencies)
         return new_entry
@@ -189,6 +189,28 @@ def remove_currency(currency_id: str) -> bool:
         if removed:
             _save_currencies_unlocked(new_list)
         return removed
+
+def set_currency_style(currency_id: str, style: str) -> bool:
+    with _currencies_lock:
+        if os.path.exists(CURRENCIES_FILE):
+            try:
+                with open(CURRENCIES_FILE, "r", encoding="utf-8") as f:
+                    currencies = json.load(f).get("currencies", [])
+            except Exception:
+                currencies = []
+        else:
+            currencies = []
+
+        found = False
+        for c in currencies:
+            if c["id"] == currency_id:
+                c["style"] = style
+                found = True
+                break
+
+        if found:
+            _save_currencies_unlocked(currencies)
+        return found
 
 # --- Matnlar (har bir tilda) ---
 TEXTS = {
@@ -274,9 +296,11 @@ def exchange_keyboard() -> InlineKeyboardMarkup:
     currencies = load_currencies()
     rows = []
     for currency in currencies:
+        style = currency.get("style", "default")
+        kwargs = {} if style == "default" else {"style": style}
         rows.append([
-            InlineKeyboardButton(f"🔷 {currency['name']}", callback_data=f"exch_give_{currency['id']}"),
-            InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}"),
+            InlineKeyboardButton(f"🔷 {currency['name']}", callback_data=f"exch_give_{currency['id']}", **kwargs),
+            InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **kwargs),
         ])
     return InlineKeyboardMarkup(rows)
 
@@ -497,12 +521,22 @@ def admin_currencies_keyboard() -> InlineKeyboardMarkup:
     currencies = load_currencies()
     rows = []
     for currency in currencies:
+        style = currency.get("style", "default")
+        style_emoji = STYLE_LABELS.get(style, "⚪ Standart").split(" ")[0]
         rows.append([
-            InlineKeyboardButton(currency["name"], callback_data="admin_curr_noop"),
+            InlineKeyboardButton(f"{style_emoji} {currency['name']}", callback_data=f"admin_curr_pick_{currency['id']}"),
             InlineKeyboardButton("❌", callback_data=f"admin_curr_del_{currency['id']}"),
         ])
     rows.append([InlineKeyboardButton("➕ Valyuta qo'shish", callback_data="admin_curr_add")])
     rows.append([InlineKeyboardButton("⬅️ Admin menyu", callback_data="admin_home")])
+    return InlineKeyboardMarkup(rows)
+
+# --- Bitta valyuta uchun rang tanlash klaviaturasi ---
+def currency_color_choice_keyboard(currency_id: str) -> InlineKeyboardMarkup:
+    rows = []
+    for style_value, style_label in STYLE_OPTIONS:
+        rows.append([InlineKeyboardButton(style_label, callback_data=f"admin_curr_set_{currency_id}_{style_value}")])
+    rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_curr_home")])
     return InlineKeyboardMarkup(rows)
 
 # --- Bitta tugma uchun rang tanlash klaviaturasi ---
@@ -630,9 +664,37 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text(text, reply_markup=admin_currencies_keyboard())
         return
 
-    if data == "admin_curr_noop":
-        # Shunchaki nom tugmasi - hech narsa qilmaydi
+    if data.startswith("admin_curr_pick_"):
+        currency_id = data.replace("admin_curr_pick_", "")
+        currencies = load_currencies()
+        currency = next((c for c in currencies if c["id"] == currency_id), None)
+        if not currency:
+            await query.answer("Topilmadi", show_alert=True)
+            return
         await query.answer()
+        current_style = currency.get("style", "default")
+        current_label = STYLE_LABELS.get(current_style, "⚪ Standart")
+        await query.edit_message_text(
+            f"🎨 {currency['name']}\n"
+            f"Joriy rang: {current_label}\n\n"
+            f"Yangi rangni tanlang:",
+            reply_markup=currency_color_choice_keyboard(currency_id),
+        )
+        return
+
+    if data.startswith("admin_curr_set_"):
+        # format: admin_curr_set_<id>_<style>
+        remainder = data.replace("admin_curr_set_", "")
+        currency_id, style = remainder.rsplit("_", 1)
+        if style not in STYLE_LABELS:
+            await query.answer()
+            return
+
+        ok = set_currency_style(currency_id, style)
+        await query.answer("✅ Rang o'zgartirildi" if ok else "Topilmadi")
+        currencies = load_currencies()
+        text = "💱 Valyutalar ro'yxati:" if currencies else "💱 Valyutalar ro'yxati hozircha bo'sh."
+        await query.edit_message_text(text, reply_markup=admin_currencies_keyboard())
         return
 
     if data.startswith("admin_curr_del_"):
