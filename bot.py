@@ -536,6 +536,7 @@ def admin_currencies_keyboard() -> InlineKeyboardMarkup:
         take_style = currency.get("take_style", "default")
         give_emoji = STYLE_LABELS.get(give_style, "⚪ Standart").split(" ")[0]
         take_emoji = STYLE_LABELS.get(take_style, "⚪ Standart").split(" ")[0]
+
         rows.append([
             InlineKeyboardButton(
                 f"{give_emoji} 🔷 {currency['name']}",
@@ -545,10 +546,21 @@ def admin_currencies_keyboard() -> InlineKeyboardMarkup:
                 f"{take_emoji} 🔶 {currency['name']}",
                 callback_data=f"admin_curr_side_{currency['id']}_take",
             ),
-            InlineKeyboardButton("❌", callback_data=f"admin_curr_del_{currency['id']}"),
         ])
+
+    if currencies:
+        rows.append([InlineKeyboardButton("🗑 O'chirish", callback_data="admin_currdelmenu")])
     rows.append([InlineKeyboardButton("➕ Valyuta qo'shish", callback_data="admin_curr_add")])
     rows.append([InlineKeyboardButton("⬅️ Admin menyu", callback_data="admin_home")])
+    return InlineKeyboardMarkup(rows)
+
+# --- O'chirish uchun valyuta tanlash paneli ---
+def admin_currencies_delete_keyboard() -> InlineKeyboardMarkup:
+    currencies = load_currencies()
+    rows = []
+    for currency in currencies:
+        rows.append([InlineKeyboardButton(currency["name"], callback_data=f"admin_curr_del_{currency['id']}")])
+    rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_curr_home")])
     return InlineKeyboardMarkup(rows)
 
 # --- Bitta valyuta + tomon uchun rang tanlash klaviaturasi ---
@@ -682,6 +694,21 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         currencies = load_currencies()
         text = "💱 Valyutalar ro'yxati:" if currencies else "💱 Valyutalar ro'yxati hozircha bo'sh."
         await query.edit_message_text(text, reply_markup=admin_currencies_keyboard())
+        return
+
+    if data == "admin_currdelmenu":
+        await query.answer()
+        currencies = load_currencies()
+        if not currencies:
+            await query.edit_message_text(
+                "💱 Valyutalar ro'yxati hozircha bo'sh.",
+                reply_markup=admin_currencies_keyboard(),
+            )
+            return
+        await query.edit_message_text(
+            "🗑 Qaysi valyutani o'chirmoqchisiz?",
+            reply_markup=admin_currencies_delete_keyboard(),
+        )
         return
 
     if data.startswith("admin_curr_side_"):
