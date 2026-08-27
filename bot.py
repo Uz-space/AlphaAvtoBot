@@ -94,6 +94,7 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     }
 
     selected = lang_map.get(query.data)
+    logger.info(f"Callback data: {query.data} -> selected: {selected}")
     if not selected:
         return
 
