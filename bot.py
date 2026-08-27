@@ -560,13 +560,20 @@ async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     if data == "exch_home":
         await query.answer()
-        # Inline klaviaturani olib tashlaymiz va asosiy (reply) menyuni qaytaramiz
+        # Almashuv xabarini butunlay o'chiramiz (ortiqcha matn qolib ketmasligi uchun)
+        # va asosiy (reply) menyuni qaytaramiz
         try:
-            await query.edit_message_reply_markup(reply_markup=None)
+            await query.message.delete()
         except Exception:
-            pass
-        await query.message.reply_text(
-            TEXTS[lang]["name_received"],
+            # Ba'zi holatlarda xabarni o'chirib bo'lmasligi mumkin (masalan juda eski) -
+            # bunda hech bo'lmasa tugmalarni olib tashlaymiz
+            try:
+                await query.edit_message_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=TEXTS[lang]["name_received"],
             reply_markup=main_menu_keyboard(lang),
         )
         return
