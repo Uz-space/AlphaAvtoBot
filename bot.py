@@ -395,10 +395,10 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.answer("⛔ Ruxsat yo'q.", show_alert=True)
         return
 
-    await query.answer()
     data = query.data
 
     if data == "admin_back":
+        await query.answer()
         await query.edit_message_text(
             "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
             reply_markup=admin_panel_keyboard(),
@@ -408,7 +408,9 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if data.startswith("admin_pick_"):
         key = data.replace("admin_pick_", "")
         if key not in BUTTON_KEYS:
+            await query.answer()
             return
+        await query.answer()
         current_style = get_button_style(key)
         current_label = STYLE_LABELS.get(current_style, "⚪ Standart")
         await query.edit_message_text(
@@ -425,11 +427,13 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # key hech qachon "_" bo'lmaydi, style ham bitta so'z - shuning uchun rsplit ishlatamiz
         key, style = remainder.rsplit("_", 1)
         if key not in BUTTON_KEYS or style not in STYLE_LABELS:
+            await query.answer()
             return
 
         set_button_style(key, style)
         PENDING_CHANGES.add(key)  # userlarga hali yuborilmagan, "Saqlash" kutilmoqda
 
+        # Callback so'roviga FAQAT BIR MARTA javob beramiz
         await query.answer(f"✅ {BUTTON_ADMIN_LABELS[key]} rangi o'zgartirildi (mahalliy)")
         await query.edit_message_text(
             "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
@@ -445,6 +449,7 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         changed_keys = list(PENDING_CHANGES)
         PENDING_CHANGES.clear()
 
+        # Callback so'roviga FAQAT BIR MARTA javob beramiz
         await query.answer("📤 Yuborilmoqda...")
         await query.edit_message_text(
             "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
@@ -454,6 +459,9 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         # Barcha ro'yxatdan o'tgan foydalanuvchilarga BIR MARTA yangilangan menyuni yuboramiz
         asyncio.create_task(broadcast_menu_update(context, changed_keys))
         return
+
+    # Noma'lum callback - baribir javob berib qo'yamiz, aks holda Telegramda "yuklanmoqda" tursib qoladi
+    await query.answer()
 
 # --- Yangilangan menyuni barcha foydalanuvchilarga yuborish ---
 async def broadcast_menu_update(context: ContextTypes.DEFAULT_TYPE, changed_keys: list) -> None:
