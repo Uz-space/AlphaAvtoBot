@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -420,7 +421,38 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
             reply_markup=admin_panel_keyboard(),
         )
+
+        # Barcha ro'yxatdan o'tgan foydalanuvchilarga yangilangan menyuni yuboramiz
+        # (ular /start bosishi shart emas, menyu o'zi yangilanadi)
+        asyncio.create_task(broadcast_menu_update(context, key))
         return
+
+# --- Yangilangan menyuni barcha foydalanuvchilarga yuborish ---
+async def broadcast_menu_update(context: ContextTypes.DEFAULT_TYPE, changed_key: str) -> None:
+    users = load_users()
+    update_texts = {
+        "uz_latin": "🔄 Menyu yangilandi:",
+        "uz_cyrillic": "🔄 Меню янгиланди:",
+    }
+
+    sent = 0
+    failed = 0
+    for user_id_str, info in users.items():
+        lang = info.get("lang", "uz_latin")
+        try:
+            await context.bot.send_message(
+                chat_id=int(user_id_str),
+                text=update_texts.get(lang, update_texts["uz_latin"]),
+                reply_markup=main_menu_keyboard(lang),
+            )
+            sent += 1
+        except Exception:
+            # Foydalanuvchi botni bloklagan yoki boshqa xatolik - o'tkazib yuboramiz
+            failed += 1
+        # Telegramning flood-limitiga tegib qolmaslik uchun kichik pauza
+        await asyncio.sleep(0.05)
+
+    logger.info(f"Menyu yangilanishi yuborildi: {sent} ta muvaffaqiyatli, {failed} ta xato")
 
 # --- Asosiy funksiya ---
 def main() -> None:
