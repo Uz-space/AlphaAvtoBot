@@ -343,14 +343,27 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
+# --- Hali userlarga yuborilmagan o'zgarishlar ro'yxati ---
+# ("Saqlash" bosilmaguncha xotirada turadi)
+PENDING_CHANGES: set[str] = set()
+
 # --- Admin panel asosiy ro'yxati ---
 def admin_panel_keyboard() -> InlineKeyboardMarkup:
     rows = []
     for key in BUTTON_KEYS:
         current_style = get_button_style(key)
         style_emoji = STYLE_LABELS.get(current_style, "⚪ Standart").split(" ")[0]
-        label = f"{style_emoji} {BUTTON_ADMIN_LABELS[key]}"
+        dot = " 🔸" if key in PENDING_CHANGES else ""
+        label = f"{style_emoji} {BUTTON_ADMIN_LABELS[key]}{dot}"
         rows.append([InlineKeyboardButton(label, callback_data=f"admin_pick_{key}")])
+
+    if PENDING_CHANGES:
+        rows.append([
+            InlineKeyboardButton(
+                f"💾 Saqlash va yuborish ({len(PENDING_CHANGES)} ta o'zgarish)",
+                callback_data="admin_save",
+            )
+        ])
     return InlineKeyboardMarkup(rows)
 
 # --- Bitta tugma uchun rang tanlash klaviaturasi ---
@@ -415,20 +428,35 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return
 
         set_button_style(key, style)
+        PENDING_CHANGES.add(key)  # userlarga hali yuborilmagan, "Saqlash" kutilmoqda
 
-        await query.answer(f"✅ {BUTTON_ADMIN_LABELS[key]} rangi o'zgartirildi!", show_alert=False)
+        await query.answer(f"✅ {BUTTON_ADMIN_LABELS[key]} rangi o'zgartirildi (mahalliy)")
+        await query.edit_message_text(
+            "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
+            reply_markup=admin_panel_keyboard(),
+        )
+        return
+
+    if data == "admin_save":
+        if not PENDING_CHANGES:
+            await query.answer("Saqlanadigan o'zgarish yo'q.", show_alert=True)
+            return
+
+        changed_keys = list(PENDING_CHANGES)
+        PENDING_CHANGES.clear()
+
+        await query.answer("📤 Yuborilmoqda...")
         await query.edit_message_text(
             "🎨 Tugmalar rangini boshqarish\n\nO'zgartirmoqchi bo'lgan tugmani tanlang:",
             reply_markup=admin_panel_keyboard(),
         )
 
-        # Barcha ro'yxatdan o'tgan foydalanuvchilarga yangilangan menyuni yuboramiz
-        # (ular /start bosishi shart emas, menyu o'zi yangilanadi)
-        asyncio.create_task(broadcast_menu_update(context, key))
+        # Barcha ro'yxatdan o'tgan foydalanuvchilarga BIR MARTA yangilangan menyuni yuboramiz
+        asyncio.create_task(broadcast_menu_update(context, changed_keys))
         return
 
 # --- Yangilangan menyuni barcha foydalanuvchilarga yuborish ---
-async def broadcast_menu_update(context: ContextTypes.DEFAULT_TYPE, changed_key: str) -> None:
+async def broadcast_menu_update(context: ContextTypes.DEFAULT_TYPE, changed_keys: list) -> None:
     users = load_users()
     update_texts = {
         "uz_latin": "🔄 Menyu yangilandi:",
