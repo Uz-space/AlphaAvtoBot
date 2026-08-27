@@ -165,7 +165,7 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 # --- Asosiy funksiya ---
 def main() -> None:
-    TOKEN = "YOUR_BOT_TOKEN_HERE"  # <-- shu yerga o'z tokeningizni kiriting
+    TOKEN = "8749302193:AAFOeDLDoimdjHSVDO728nAtsBngqncy8Uk"  # <-- shu yerga o'z tokeningizni kiriting
 
     app = ApplicationBuilder().token(TOKEN).build()
 
