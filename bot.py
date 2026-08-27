@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 ADMIN_IDS = {8758410535}  # <-- shu ro'yxatga boshqa adminlarni ham qo'shishingiz mumkin
 
 CONFIG_FILE = "config.json"
+USERS_FILE = "users.json"
 
 # --- Tugma kalitlari va ularning admin panelida ko'rinadigan nomlari ---
 BUTTON_KEYS = ["exchange", "rate", "settings", "support"]
@@ -70,6 +71,29 @@ def set_button_style(key: str, style: str) -> None:
     config = load_config()
     config.setdefault("button_styles", {})[key] = style
     save_config(config)
+
+# --- Ro'yxatdan o'tgan foydalanuvchilarni yuklash / saqlash ---
+def load_users() -> dict:
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            logger.exception("Users faylini o'qishda xatolik")
+    return {}
+
+def save_users(users: dict) -> None:
+    with open(USERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(users, f, ensure_ascii=False, indent=2)
+
+def get_user(user_id: int) -> dict | None:
+    users = load_users()
+    return users.get(str(user_id))
+
+def save_user(user_id: int, lang: str, phone: str, full_name: str) -> None:
+    users = load_users()
+    users[str(user_id)] = {"lang": lang, "phone": phone, "full_name": full_name}
+    save_users(users)
 
 # --- Matnlar (har bir tilda) ---
 TEXTS = {
@@ -146,6 +170,23 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
 
 # --- /start komandasi ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    saved_user = get_user(user_id)
+
+    if saved_user:
+        # Foydalanuvchi avval ro'yxatdan o'tgan - to'g'ridan-to'g'ri menyuni ko'rsatamiz
+        lang = saved_user.get("lang", "uz_latin")
+        context.user_data["lang"] = lang
+        context.user_data["phone"] = saved_user.get("phone")
+        context.user_data["full_name"] = saved_user.get("full_name")
+        context.user_data["awaiting_name"] = False
+
+        await update.message.reply_text(
+            TEXTS[lang]["name_received"],
+            reply_markup=main_menu_keyboard(lang),
+        )
+        return
+
     text = "🌐 Tilni tanlang / Тилни танланг:"
     await update.message.reply_text(text, reply_markup=language_keyboard())
 
@@ -194,9 +235,14 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     lang = context.user_data.get("lang", "uz_latin")
     full_name = update.message.text.strip()
+    phone = context.user_data.get("phone", "")
 
     context.user_data["full_name"] = full_name
     context.user_data["awaiting_name"] = False
+
+    # Ro'yxatdan o'tishni doimiy saqlash - keyingi /start larda qayta so'ralmasin
+    user_id = update.effective_user.id
+    save_user(user_id, lang, phone, full_name)
 
     await update.message.reply_text(
         TEXTS[lang]["name_received"],
