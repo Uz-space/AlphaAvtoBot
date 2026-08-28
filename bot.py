@@ -530,7 +530,32 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
 # --- Matnli xabarlarni yo'naltirish (ism, valyuta nomi yoki menyu) ---
+# --- Matn asosiy menyu tugmalaridan biriga mos kelishini tekshirish (ikkala tildan) ---
+def find_menu_key(text: str):
+    for lng, lng_texts in TEXTS.items():
+        for key, value in lng_texts["menu"].items():
+            if value == text:
+                return key, lng
+    return None, None
+
+# --- Matnli xabarlarni yo'naltirish (ism, valyuta nomi yoki menyu) ---
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Agar foydalanuvchi biror "kutish" holatida bo'lsa-yu (masalan Aloqa xabari,
+    # ism o'zgartirish va h.k.), lekin ASOSIY MENYU tugmalaridan birini bosgan bo'lsa -
+    # avval barcha kutish holatlarini bekor qilamiz va o'sha tugmaning o'zini bajaramiz.
+    # Aks holda masalan "Kurs" tugmasi bosilganda u "Aloqa xabari" deb yuborilib ketardi.
+    matched_key, _ = find_menu_key(update.message.text or "")
+    if matched_key:
+        context.user_data["awaiting_currency_name"] = False
+        context.user_data["awaiting_name_change"] = False
+        context.user_data["awaiting_support_message"] = False
+        context.user_data["awaiting_phone_change"] = False
+        context.user_data["changing_language"] = False
+        if is_admin(update.effective_user.id):
+            context.user_data["awaiting_reply_to"] = None
+        await menu_handler(update, context)
+        return
+
     if is_admin(update.effective_user.id) and context.user_data.get("awaiting_reply_to"):
         await admin_reply_handler(update, context)
     elif context.user_data.get("awaiting_currency_name"):
