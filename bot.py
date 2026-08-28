@@ -55,11 +55,14 @@ BUTTON_ADMIN_LABELS = {
 
 # --- Inline (bir martalik) tugmalar - reply-menyudan farqli, avtomatik yangilanadi,
 # shuning uchun "Saqlash va yuborish" kerak emas, rang darhol qo'llanadi ---
-INLINE_BUTTON_KEYS = ["lang_latin", "lang_cyrillic", "home"]
+INLINE_BUTTON_KEYS = ["lang_latin", "lang_cyrillic", "home", "stg_lang", "stg_name", "stg_phone"]
 INLINE_BUTTON_ADMIN_LABELS = {
     "lang_latin": "🇺🇿 Oʻzbekcha (til tanlash)",
     "lang_cyrillic": "🇺🇿 Кириллча (til tanlash)",
     "home": "🏠 Bosh menyu",
+    "stg_lang": "🌐 Tilni o'zgartirish (Sozlamalar)",
+    "stg_name": "👤 Ismni o'zgartirish (Sozlamalar)",
+    "stg_phone": "📞 Telefonni o'zgartirish (Sozlamalar)",
 }
 
 # --- Mavjud ranglar (Telegram Bot API 9.4 orqali qo'llab-quvvatlanadi) ---
@@ -260,6 +263,16 @@ TEXTS = {
         "rate_currency_unit": "so'm",
         "rate_empty": "Hozircha valyutalar qo'shilmagan.",
         "rate_not_set": "belgilanmagan",
+        "settings_header": "⚙️ Sozlamalar\n\n👤 Ism: {name}\n🌐 Til: {lang_label}\n📞 Telefon: {phone}\n\nO'zgartirmoqchi bo'lganingizni tanlang 👇",
+        "settings_change_lang": "🌐 Tilni o'zgartirish",
+        "settings_change_name": "👤 Ismni o'zgartirish",
+        "settings_change_phone": "📞 Telefonni o'zgartirish",
+        "settings_choose_new_lang": "🌐 Yangi tilni tanlang:",
+        "settings_lang_changed": "✅ Til o'zgartirildi!",
+        "settings_ask_new_name": "✍️ Yangi ism-familiyangizni kiriting:",
+        "settings_name_changed": "✅ Ism yangilandi!",
+        "settings_ask_new_phone": "📞 Yangi telefon raqamingizni yuboring:",
+        "settings_phone_changed": "✅ Telefon raqam yangilandi!",
     },
     "uz_cyrillic": {
         "ask_phone": "Хуш келибсиз! Ботдан фойдаланишни бошлаш учун телефон рақамингизни юборинг:",
@@ -289,6 +302,16 @@ TEXTS = {
         "rate_currency_unit": "сўм",
         "rate_empty": "Ҳозирча валюталар қўшилмаган.",
         "rate_not_set": "белгиланмаган",
+        "settings_header": "⚙️ Созламалар\n\n👤 Исм: {name}\n🌐 Тил: {lang_label}\n📞 Телефон: {phone}\n\nЎзгартирмоқчи бўлганингизни танланг 👇",
+        "settings_change_lang": "🌐 Тилни ўзгартириш",
+        "settings_change_name": "👤 Исмни ўзгартириш",
+        "settings_change_phone": "📞 Телефонни ўзгартириш",
+        "settings_choose_new_lang": "🌐 Янги тилни танланг:",
+        "settings_lang_changed": "✅ Тил ўзгартирилди!",
+        "settings_ask_new_name": "✍️ Янги исм-фамилиянгизни киритинг:",
+        "settings_name_changed": "✅ Исм янгиланди!",
+        "settings_ask_new_phone": "📞 Янги телефон рақамингизни юборинг:",
+        "settings_phone_changed": "✅ Телефон рақам янгиланди!",
     },
 }
 
@@ -381,6 +404,29 @@ def build_rate_text(lang: str) -> str:
 def rate_keyboard(lang: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([home_button_row(lang)])
 
+# --- "Sozlamalar" bo'limi: joriy ma'lumot + o'zgartirish tugmalari ---
+def settings_text(lang: str, name: str, phone: str) -> str:
+    lang_label = "🇺🇿 Oʻzbekcha (lotin)" if lang == "uz_latin" else "🇺🇿 Кириллча"
+    return TEXTS[lang]["settings_header"].format(
+        name=name or "—",
+        lang_label=lang_label,
+        phone=phone or "—",
+    )
+
+def settings_keyboard(lang: str) -> InlineKeyboardMarkup:
+    def styled(text: str, key: str, callback_data: str) -> InlineKeyboardButton:
+        style = get_button_style(key)
+        kwargs = {} if style == "default" else {"style": style}
+        return InlineKeyboardButton(text, callback_data=callback_data, **kwargs)
+
+    rows = [
+        [styled(TEXTS[lang]["settings_change_lang"], "stg_lang", "stg_lang")],
+        [styled(TEXTS[lang]["settings_change_name"], "stg_name", "stg_name")],
+        [styled(TEXTS[lang]["settings_change_phone"], "stg_phone", "stg_phone")],
+    ]
+    rows.append(home_button_row(lang))
+    return InlineKeyboardMarkup(rows)
+
 # --- /start komandasi ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
@@ -417,6 +463,32 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not selected:
         return
 
+    # Agar bu "Sozlamalar"dan turib til o'zgartirish bo'lsa - ro'yxatdan o'tish
+    # oqimini QAYTA boshlamaymiz, faqat tilni yangilab, asosiy menyuga qaytamiz
+    if context.user_data.get("changing_language"):
+        context.user_data["changing_language"] = False
+        existing = get_user(query.from_user.id) or {}
+        phone = existing.get("phone") or context.user_data.get("phone", "")
+        full_name = existing.get("full_name") or context.user_data.get("full_name", "")
+        context.user_data["lang"] = selected
+        save_user(query.from_user.id, selected, phone, full_name)
+
+        try:
+            await query.message.delete()
+        except Exception:
+            try:
+                await query.edit_message_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=TEXTS[selected]["settings_lang_changed"],
+            reply_markup=main_menu_keyboard(selected),
+        )
+        return
+
+    # Aks holda - bu birinchi marta ro'yxatdan o'tish oqimi
     context.user_data["lang"] = selected
     await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text(
@@ -434,6 +506,21 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     phone = update.message.contact.phone_number
 
+    # Agar bu "Sozlamalar"dan turib telefon o'zgartirish bo'lsa
+    if context.user_data.get("awaiting_phone_change"):
+        context.user_data["awaiting_phone_change"] = False
+        existing = get_user(update.effective_user.id) or {}
+        full_name = existing.get("full_name") or context.user_data.get("full_name", "")
+        context.user_data["phone"] = phone
+        save_user(update.effective_user.id, lang, phone, full_name)
+
+        await update.message.reply_text(
+            TEXTS[lang]["settings_phone_changed"],
+            reply_markup=main_menu_keyboard(lang),
+        )
+        return
+
+    # Aks holda - bu birinchi marta ro'yxatdan o'tish oqimi
     context.user_data["phone"] = phone
     context.user_data["awaiting_name"] = True
 
@@ -450,10 +537,33 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await currency_name_handler(update, context)
     elif context.user_data.get("awaiting_name"):
         await name_handler(update, context)
+    elif context.user_data.get("awaiting_name_change"):
+        await name_change_handler(update, context)
     elif context.user_data.get("awaiting_support_message"):
         await support_message_handler(update, context)
     else:
         await menu_handler(update, context)
+
+# --- Sozlamalar: ismni o'zgartirish ---
+async def name_change_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    lang = context.user_data.get("lang", "uz_latin")
+    context.user_data["awaiting_name_change"] = False
+    new_name = update.message.text.strip()
+
+    if not new_name:
+        await update.message.reply_text(TEXTS[lang]["settings_ask_new_name"])
+        context.user_data["awaiting_name_change"] = True
+        return
+
+    existing = get_user(update.effective_user.id) or {}
+    phone = existing.get("phone") or context.user_data.get("phone", "")
+    context.user_data["full_name"] = new_name
+    save_user(update.effective_user.id, lang, phone, new_name)
+
+    await update.message.reply_text(
+        TEXTS[lang]["settings_name_changed"],
+        reply_markup=main_menu_keyboard(lang),
+    )
 
 # --- Admin: yangi valyuta nomini qabul qilish ---
 async def currency_name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -610,6 +720,17 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
         return
 
+    # "Sozlamalar" alohida - joriy ma'lumot va o'zgartirish tugmalari
+    if matched_key == "settings":
+        saved_user = get_user(update.effective_user.id) or {}
+        name = saved_user.get("full_name") or context.user_data.get("full_name", "")
+        phone = saved_user.get("phone") or context.user_data.get("phone", "")
+        await update.message.reply_text(
+            settings_text(matched_lang, name, phone),
+            reply_markup=settings_keyboard(matched_lang),
+        )
+        return
+
     reply_text = TEXTS[matched_lang]["menu_replies"][matched_key]
     await update.message.reply_text(reply_text)
 
@@ -659,6 +780,43 @@ async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.answer(TEXTS[lang]["exchange_selected"].format(name=currency["name"]))
     # Keyingi qadam (masalan ikkinchi valyutani tanlash, summa kiritish, kurs hisoblash)
     # shu yerdan davom etadi - hozircha faqat tanlov tasdiqlanadi.
+
+# --- Sozlamalar bo'limi callback'i (til/ism/telefon o'zgartirish) ---
+async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    lang = context.user_data.get("lang")
+    if not lang:
+        saved_user = get_user(query.from_user.id)
+        lang = saved_user.get("lang", "uz_latin") if saved_user else "uz_latin"
+        context.user_data["lang"] = lang
+
+    data = query.data
+
+    if data == "stg_lang":
+        context.user_data["changing_language"] = True
+        await query.answer()
+        await query.message.reply_text(
+            TEXTS[lang]["settings_choose_new_lang"],
+            reply_markup=language_keyboard(),
+        )
+        return
+
+    if data == "stg_name":
+        context.user_data["awaiting_name_change"] = True
+        await query.answer()
+        await query.message.reply_text(TEXTS[lang]["settings_ask_new_name"])
+        return
+
+    if data == "stg_phone":
+        context.user_data["awaiting_phone_change"] = True
+        await query.answer()
+        await query.message.reply_text(
+            TEXTS[lang]["settings_ask_new_phone"],
+            reply_markup=phone_keyboard(lang),
+        )
+        return
+
+    await query.answer()
 
 # =========================================================
 # ============ ADMIN PANEL (tugma ranglari) ==============
@@ -1053,6 +1211,7 @@ def main() -> None:
     app.add_handler(CallbackQueryHandler(admin_callback, pattern="^admin_"))
     app.add_handler(CallbackQueryHandler(language_callback, pattern="^lang_"))
     app.add_handler(CallbackQueryHandler(exchange_callback, pattern="^exch_"))
+    app.add_handler(CallbackQueryHandler(settings_callback, pattern="^stg_"))
     app.add_handler(MessageHandler(filters.CONTACT, contact_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
