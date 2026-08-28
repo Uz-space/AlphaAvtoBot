@@ -255,6 +255,11 @@ TEXTS = {
         "support_prompt": "✍️ Xabaringizni yozing, u to'g'ridan-to'g'ri operatorga yuboriladi:",
         "support_sent": "✅ Xabaringiz yuborildi! Tez orada javob beramiz.",
         "support_admin_reply_prefix": "💬 Operator javobi:\n\n",
+        "rate_sell_header": "📉 Sotish kursi",
+        "rate_buy_header": "📈 Sotib olish kursi",
+        "rate_currency_unit": "so'm",
+        "rate_empty": "Hozircha valyutalar qo'shilmagan.",
+        "rate_not_set": "belgilanmagan",
     },
     "uz_cyrillic": {
         "ask_phone": "Хуш келибсиз! Ботдан фойдаланишни бошлаш учун телефон рақамингизни юборинг:",
@@ -279,6 +284,11 @@ TEXTS = {
         "support_prompt": "✍️ Хабарингизни ёзинг, у тўғридан-тўғри операторга юборилади:",
         "support_sent": "✅ Хабарингиз юборилди! Тез орада жавоб берамиз.",
         "support_admin_reply_prefix": "💬 Оператор жавоби:\n\n",
+        "rate_sell_header": "📉 Сотиш курси",
+        "rate_buy_header": "📈 Сотиб олиш курси",
+        "rate_currency_unit": "сўм",
+        "rate_empty": "Ҳозирча валюталар қўшилмаган.",
+        "rate_not_set": "белгиланмаган",
     },
 }
 
@@ -334,11 +344,42 @@ def exchange_keyboard(lang: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **take_kwargs),
         ])
 
+    rows.append(home_button_row(lang))
+    return InlineKeyboardMarkup(rows)
+
+# --- "Bosh menyu" tugmasi (bir nechta joyda ishlatiladi, rangi HAMMASIDA bir xil "home" kalitidan) ---
+def home_button_row(lang: str) -> list:
     home_style = get_button_style("home")
     home_kwargs = {} if home_style == "default" else {"style": home_style}
     home_label = "🏠 Bosh menyu" if lang == "uz_latin" else "🏠 Бош меню"
-    rows.append([InlineKeyboardButton(home_label, callback_data="exch_home", **home_kwargs)])
-    return InlineKeyboardMarkup(rows)
+    return [InlineKeyboardButton(home_label, callback_data="exch_home", **home_kwargs)]
+
+# --- "Kurs" bo'limi: sotish/sotib olish kurslari ro'yxati (faqat ko'rinish, hozircha statik) ---
+def build_rate_text(lang: str) -> str:
+    currencies = load_currencies()
+    unit = TEXTS[lang]["rate_currency_unit"]
+    not_set = TEXTS[lang]["rate_not_set"]
+
+    if not currencies:
+        return TEXTS[lang]["rate_empty"]
+
+    sell_lines = [TEXTS[lang]["rate_sell_header"]]
+    buy_lines = [TEXTS[lang]["rate_buy_header"]]
+
+    for currency in currencies:
+        name = currency["name"]
+        # Hozircha faqat ko'rinish - haqiqiy kurs/spred hisob-kitobi keyinroq ulanadi
+        sell_rate = currency.get("sell_rate")
+        buy_rate = currency.get("buy_rate")
+        sell_value = f"{sell_rate:,}".replace(",", " ") if sell_rate else not_set
+        buy_value = f"{buy_rate:,}".replace(",", " ") if buy_rate else not_set
+        sell_lines.append(f"1 {name} = {sell_value} {unit}")
+        buy_lines.append(f"1 {name} = {buy_value} {unit}")
+
+    return "\n".join(sell_lines) + "\n\n" + "\n".join(buy_lines)
+
+def rate_keyboard(lang: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([home_button_row(lang)])
 
 # --- /start komandasi ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -559,6 +600,14 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if matched_key == "support":
         context.user_data["awaiting_support_message"] = True
         await update.message.reply_text(TEXTS[matched_lang]["support_prompt"])
+        return
+
+    # "Kurs" alohida - sotish/sotib olish kurslari ro'yxati (hozircha faqat ko'rinish)
+    if matched_key == "rate":
+        await update.message.reply_text(
+            build_rate_text(matched_lang),
+            reply_markup=rate_keyboard(matched_lang),
+        )
         return
 
     reply_text = TEXTS[matched_lang]["menu_replies"][matched_key]
