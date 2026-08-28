@@ -53,6 +53,15 @@ BUTTON_ADMIN_LABELS = {
     "support": "☎️ Aloqa",
 }
 
+# --- Inline (bir martalik) tugmalar - reply-menyudan farqli, avtomatik yangilanadi,
+# shuning uchun "Saqlash va yuborish" kerak emas, rang darhol qo'llanadi ---
+INLINE_BUTTON_KEYS = ["lang_latin", "lang_cyrillic", "home"]
+INLINE_BUTTON_ADMIN_LABELS = {
+    "lang_latin": "🇺🇿 Oʻzbekcha (til tanlash)",
+    "lang_cyrillic": "🇺🇿 Кириллча (til tanlash)",
+    "home": "🏠 Bosh menyu",
+}
+
 # --- Mavjud ranglar (Telegram Bot API 9.4 orqali qo'llab-quvvatlanadi) ---
 STYLE_OPTIONS = [
     ("default", "⚪ Standart"),
@@ -275,10 +284,15 @@ TEXTS = {
 
 # --- Til tanlash klaviaturasi (inline) ---
 def language_keyboard() -> InlineKeyboardMarkup:
+    latin_style = get_button_style("lang_latin")
+    cyrillic_style = get_button_style("lang_cyrillic")
+    latin_kwargs = {} if latin_style == "default" else {"style": latin_style}
+    cyrillic_kwargs = {} if cyrillic_style == "default" else {"style": cyrillic_style}
+
     keyboard = [
         [
-            InlineKeyboardButton("🇺🇿 Oʻzbekcha", callback_data="lang_uz_latin"),
-            InlineKeyboardButton("🇺🇿 Кириллча", callback_data="lang_uz_cyrillic"),
+            InlineKeyboardButton("🇺🇿 Oʻzbekcha", callback_data="lang_uz_latin", **latin_kwargs),
+            InlineKeyboardButton("🇺🇿 Кириллча", callback_data="lang_uz_cyrillic", **cyrillic_kwargs),
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
@@ -320,8 +334,10 @@ def exchange_keyboard(lang: str) -> InlineKeyboardMarkup:
             InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **take_kwargs),
         ])
 
+    home_style = get_button_style("home")
+    home_kwargs = {} if home_style == "default" else {"style": home_style}
     home_label = "🏠 Bosh menyu" if lang == "uz_latin" else "🏠 Бош меню"
-    rows.append([InlineKeyboardButton(home_label, callback_data="exch_home")])
+    rows.append([InlineKeyboardButton(home_label, callback_data="exch_home", **home_kwargs)])
     return InlineKeyboardMarkup(rows)
 
 # --- /start komandasi ---
@@ -678,13 +694,33 @@ def color_choice_keyboard(key: str) -> InlineKeyboardMarkup:
     rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_back")])
     return InlineKeyboardMarkup(rows)
 
-# --- Admin bosh menyusi (ranglar / valyutalar) ---
+# --- Admin bosh menyusi (ranglar / valyutalar / boshqa tugmalar) ---
 def admin_home_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton("🎨 Tugmalar rangi", callback_data="admin_colors")],
+        [InlineKeyboardButton("🎨 Menyu tugmalari rangi", callback_data="admin_colors")],
         [InlineKeyboardButton("💱 Valyutalar ro'yxati", callback_data="admin_curr_home")],
+        [InlineKeyboardButton("🌐 Til / Boshqa tugmalar", callback_data="admin_inl_home")],
     ]
     return InlineKeyboardMarkup(keyboard)
+
+# --- Til/Boshqa (inline) tugmalar ro'yxati ---
+def admin_inline_buttons_keyboard() -> InlineKeyboardMarkup:
+    rows = []
+    for key in INLINE_BUTTON_KEYS:
+        current_style = get_button_style(key)
+        style_emoji = STYLE_LABELS.get(current_style, "⚪ Standart").split(" ")[0]
+        label = f"{style_emoji} {INLINE_BUTTON_ADMIN_LABELS[key]}"
+        rows.append([InlineKeyboardButton(label, callback_data=f"admin_inl_pick_{key}")])
+    rows.append([InlineKeyboardButton("⬅️ Admin menyu", callback_data="admin_home")])
+    return InlineKeyboardMarkup(rows)
+
+# --- Til/Boshqa tugma uchun rang tanlash klaviaturasi ---
+def inline_color_choice_keyboard(key: str) -> InlineKeyboardMarkup:
+    rows = []
+    for style_value, style_label in STYLE_OPTIONS:
+        rows.append([InlineKeyboardButton(style_label, callback_data=f"admin_inl_set_{key}_{style_value}")])
+    rows.append([InlineKeyboardButton("⬅️ Orqaga", callback_data="admin_inl_home")])
+    return InlineKeyboardMarkup(rows)
 
 # --- /admin komandasi ---
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -714,6 +750,53 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text(
             "🛠 Admin panel\n\nBo'limni tanlang:",
             reply_markup=admin_home_keyboard(),
+        )
+        return
+
+    if data == "admin_inl_home":
+        await query.answer()
+        await query.edit_message_text(
+            "🌐 Til / Boshqa tugmalar\n\n"
+            "Bu tugmalar avtomatik yangilanadi - rang darhol qo'llanadi, "
+            "\"Saqlash\" tugmasi kerak emas.\n\n"
+            "O'zgartirmoqchi bo'lgan tugmani tanlang:",
+            reply_markup=admin_inline_buttons_keyboard(),
+        )
+        return
+
+    if data.startswith("admin_inl_pick_"):
+        key = data.replace("admin_inl_pick_", "")
+        if key not in INLINE_BUTTON_KEYS:
+            await query.answer()
+            return
+        await query.answer()
+        current_style = get_button_style(key)
+        current_label = STYLE_LABELS.get(current_style, "⚪ Standart")
+        await query.edit_message_text(
+            f"🎨 {INLINE_BUTTON_ADMIN_LABELS[key]}\n"
+            f"Joriy rang: {current_label}\n\n"
+            f"Yangi rangni tanlang:",
+            reply_markup=inline_color_choice_keyboard(key),
+        )
+        return
+
+    if data.startswith("admin_inl_set_"):
+        # format: admin_inl_set_<key>_<style>
+        remainder = data.replace("admin_inl_set_", "")
+        key, style = remainder.rsplit("_", 1)
+        if key not in INLINE_BUTTON_KEYS or style not in STYLE_LABELS:
+            await query.answer()
+            return
+
+        set_button_style(key, style)
+        # Diqqat: bu yerda PENDING_CHANGES ga QO'SHILMAYDI va broadcast ISHGA TUSHMAYDI -
+        # chunki bu inline tugmalar har safar yangidan chiqariladi, reply-menyu emas.
+
+        await query.answer(f"✅ {INLINE_BUTTON_ADMIN_LABELS[key]} rangi o'zgartirildi")
+        await query.edit_message_text(
+            "🌐 Til / Boshqa tugmalar\n\n"
+            "O'zgartirmoqchi bo'lgan tugmani tanlang:",
+            reply_markup=admin_inline_buttons_keyboard(),
         )
         return
 
