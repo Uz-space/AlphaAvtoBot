@@ -732,6 +732,13 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     chat_id = update.effective_chat.id
 
+    # Foydalanuvchining tugma bosgani (yuborilgan matn xabari) ham chatda qolib
+    # ketmasin - uni o'chiramiz. (Botning eski xabari send_tracked ichida o'chadi.)
+    try:
+        await update.message.delete()
+    except Exception:
+        pass
+
     # "Valyuta ayirboshlash" alohida - inline klaviatura bilan valyutalar ro'yxatini ko'rsatamiz
     if matched_key == "exchange":
         currencies = load_currencies()
