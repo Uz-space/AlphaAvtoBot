@@ -168,7 +168,7 @@ def _save_currencies_unlocked(currencies: list) -> None:
     with open(CURRENCIES_FILE, "w", encoding="utf-8") as f:
         json.dump({"currencies": currencies}, f, ensure_ascii=False, indent=2)
 
-def add_currency(name: str) -> dict:
+def add_currency(name: str, category: str = "crypto") -> dict:
     import uuid
     with _currencies_lock:
         if os.path.exists(CURRENCIES_FILE):
@@ -183,12 +183,35 @@ def add_currency(name: str) -> dict:
         new_entry = {
             "id": uuid.uuid4().hex[:8],
             "name": name,
+            "category": category,  # "fiat" (so'm) yoki "crypto" - faqat fiat<->crypto almashinadi
             "give_style": "default",  # 🔷 "bering" tomonidagi rang
             "take_style": "default",  # 🔶 "oling" tomonidagi rang
         }
         currencies.append(new_entry)
         _save_currencies_unlocked(currencies)
         return new_entry
+
+def set_currency_category(currency_id: str, category: str) -> bool:
+    with _currencies_lock:
+        if os.path.exists(CURRENCIES_FILE):
+            try:
+                with open(CURRENCIES_FILE, "r", encoding="utf-8") as f:
+                    currencies = json.load(f).get("currencies", [])
+            except Exception:
+                currencies = []
+        else:
+            currencies = []
+
+        found = False
+        for c in currencies:
+            if c["id"] == currency_id:
+                c["category"] = category
+                found = True
+                break
+
+        if found:
+            _save_currencies_unlocked(currencies)
+        return found
 
 def remove_currency(currency_id: str) -> bool:
     with _currencies_lock:
@@ -255,6 +278,9 @@ TEXTS = {
         "exchange_header": "🔀 Almashuv: qaysi tomondan boshlaysiz (🔷 bering / 🔶 oling):",
         "exchange_empty": "Hozircha valyutalar qo'shilmagan. Admin tez orada qo'shadi.",
         "exchange_selected": "✅ Tanlandi: {name}",
+        "exchange_step2_header": "✅ 1-valyutani tanladingiz. Endi 2-valyutani (🔶) tanlang:",
+        "exchange_pair_selected": "✅ {give_name} → {take_name}\n\nJuftlik tanlandi.",
+        "exchange_disabled_pair": "❌ Bu juftlik mos emas (Fiat↔Fiat yoki Kripto↔Kripto ishlamaydi)",
         "support_prompt": "✍️ Xabaringizni yozing, u to'g'ridan-to'g'ri operatorga yuboriladi:",
         "support_sent": "✅ Xabaringiz yuborildi! Tez orada javob beramiz.",
         "support_admin_reply_prefix": "💬 Operator javobi:\n\n",
@@ -294,6 +320,9 @@ TEXTS = {
         "exchange_header": "🔀 Алмашув: қайси томондан бошлайсиз (🔷 беринг / 🔶 олинг):",
         "exchange_empty": "Ҳозирча валюталар қўшилмаган. Админ тез орада қўшади.",
         "exchange_selected": "✅ Танланди: {name}",
+        "exchange_step2_header": "✅ 1-валютани танладингиз. Энди 2-валютани (🔶) танланг:",
+        "exchange_pair_selected": "✅ {give_name} → {take_name}\n\nЖуфтлик танланди.",
+        "exchange_disabled_pair": "❌ Бу жуфтлик мос эмас (Fiat↔Fiat ёки Крипто↔Крипто ишламайди)",
         "support_prompt": "✍️ Хабарингизни ёзинг, у тўғридан-тўғри операторга юборилади:",
         "support_sent": "✅ Хабарингиз юборилди! Тез орада жавоб берамиз.",
         "support_admin_reply_prefix": "💬 Оператор жавоби:\n\n",
@@ -354,18 +383,40 @@ def main_menu_keyboard(lang: str) -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # --- Valyuta almashuv klaviaturasi (inline, 2 ustunli: bering / oling) ---
-def exchange_keyboard(lang: str) -> InlineKeyboardMarkup:
+def exchange_keyboard(lang: str, give_currency_id: str = None) -> InlineKeyboardMarkup:
     currencies = load_currencies()
     rows = []
+
+    # Agar "berish" valyutasi allaqachon tanlangan bo'lsa - uning toifasini aniqlaymiz,
+    # shunga qarab "olish" tomonida mos kelmaydigan tugmalarni bloklaymiz
+    give_category = None
+    if give_currency_id:
+        selected = next((c for c in currencies if c["id"] == give_currency_id), None)
+        give_category = selected.get("category", "crypto") if selected else None
+
     for currency in currencies:
         give_style = currency.get("give_style", "default")
         take_style = currency.get("take_style", "default")
         give_kwargs = {} if give_style == "default" else {"style": give_style}
         take_kwargs = {} if take_style == "default" else {"style": take_style}
-        rows.append([
-            InlineKeyboardButton(f"🔷 {currency['name']}", callback_data=f"exch_give_{currency['id']}", **give_kwargs),
-            InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **take_kwargs),
-        ])
+
+        # --- 🔷 "Berish" tugmasi ---
+        is_selected_give = give_currency_id and currency["id"] == give_currency_id
+        give_label = f"🔷 {currency['name']} ✅" if is_selected_give else f"🔷 {currency['name']}"
+        give_btn = InlineKeyboardButton(give_label, callback_data=f"exch_give_{currency['id']}", **give_kwargs)
+
+        # --- 🔶 "Olish" tugmasi ---
+        if give_currency_id:
+            currency_category = currency.get("category", "crypto")
+            if currency_category == give_category:
+                # Fiat<->Fiat yoki Kripto<->Kripto ishlamaydi - bloklaymiz
+                take_btn = InlineKeyboardButton("⬛", callback_data="exch_disabled")
+            else:
+                take_btn = InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **take_kwargs)
+        else:
+            take_btn = InlineKeyboardButton(f"🔶 {currency['name']}", callback_data=f"exch_take_{currency['id']}", **take_kwargs)
+
+        rows.append([give_btn, take_btn])
 
     rows.append(home_button_row(lang))
     return InlineKeyboardMarkup(rows)
@@ -599,11 +650,18 @@ async def currency_name_handler(update: Update, context: ContextTypes.DEFAULT_TY
         await update.message.reply_text("Bo'sh nom kiritib bo'lmaydi.")
         return
 
-    add_currency(name)
-    await update.message.reply_text(f"✅ '{name}' valyutalar ro'yxatiga qo'shildi.")
+    # Nomni vaqtincha saqlaymiz, endi toifasini so'raymiz (fiat/kripto)
+    context.user_data["pending_currency_name"] = name
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("💵 Fiat (so'm)", callback_data="admin_curr_cat_fiat")],
+        [InlineKeyboardButton("🪙 Kripto", callback_data="admin_curr_cat_crypto")],
+    ])
     await update.message.reply_text(
-        "💱 Valyutalar ro'yxati:",
-        reply_markup=admin_currencies_keyboard(),
+        f"'{name}' — toifasini tanlang:\n\n"
+        f"💵 Fiat — so'm ekvivalenti (masalan UZCARD, HUMO)\n"
+        f"🪙 Kripto — kriptovalyuta (masalan USDT, TRX)\n\n"
+        f"Eslatma: faqat Fiat↔Kripto almashtiriladi, Fiat↔Fiat va Kripto↔Kripto ishlamaydi.",
+        reply_markup=keyboard,
     )
 
 # --- Foydalanuvchi: aloqa xabarini qabul qilish va adminga yuborish ---
@@ -721,6 +779,7 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     # "Valyuta ayirboshlash" alohida - inline klaviatura bilan valyutalar ro'yxatini ko'rsatamiz
     if matched_key == "exchange":
+        context.user_data["exch_give_selected"] = None
         currencies = load_currencies()
         if not currencies:
             await update.message.reply_text(TEXTS[matched_lang]["exchange_empty"])
@@ -771,6 +830,7 @@ async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     if data == "exch_home":
         await query.answer()
+        context.user_data["exch_give_selected"] = None
         # Almashuv xabarini butunlay o'chiramiz (ortiqcha matn qolib ketmasligi uchun)
         # va asosiy (reply) menyuni qaytaramiz
         try:
@@ -789,22 +849,61 @@ async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         )
         return
 
-    currencies = load_currencies()
-
-    currency_id = None
-    if data.startswith("exch_give_"):
-        currency_id = data.replace("exch_give_", "")
-    elif data.startswith("exch_take_"):
-        currency_id = data.replace("exch_take_", "")
-
-    currency = next((c for c in currencies if c["id"] == currency_id), None)
-    if not currency:
-        await query.answer()
+    if data == "exch_disabled":
+        # Qora kvadrat - fiat<->fiat yoki kripto<->kripto ruxsat etilmagan
+        await query.answer(TEXTS[lang]["exchange_disabled_pair"], show_alert=True)
         return
 
-    await query.answer(TEXTS[lang]["exchange_selected"].format(name=currency["name"]))
-    # Keyingi qadam (masalan ikkinchi valyutani tanlash, summa kiritish, kurs hisoblash)
-    # shu yerdan davom etadi - hozircha faqat tanlov tasdiqlanadi.
+    currencies = load_currencies()
+
+    if data.startswith("exch_give_"):
+        currency_id = data.replace("exch_give_", "")
+        currency = next((c for c in currencies if c["id"] == currency_id), None)
+        if not currency:
+            await query.answer()
+            return
+
+        # 1-valyuta (berish) tanlandi - endi 2-bosqichga o'tamiz:
+        # tanlangan valyutani ✅ bilan belgilaymiz, mos kelmaydigan "olish" tugmalarini bloklaymiz
+        context.user_data["exch_give_selected"] = currency_id
+        await query.answer()
+        await query.edit_message_text(
+            TEXTS[lang]["exchange_step2_header"],
+            reply_markup=exchange_keyboard(lang, give_currency_id=currency_id),
+        )
+        return
+
+    if data.startswith("exch_take_"):
+        currency_id = data.replace("exch_take_", "")
+        take_currency = next((c for c in currencies if c["id"] == currency_id), None)
+        if not take_currency:
+            await query.answer()
+            return
+
+        give_id = context.user_data.get("exch_give_selected")
+        give_currency = next((c for c in currencies if c["id"] == give_id), None) if give_id else None
+
+        if not give_currency:
+            # "Berish" valyutasi hali tanlanmagan (masalan eski xabarda to'g'ridan-to'g'ri
+            # "olish" tugmasi bosilgan) - avval berish valyutasini so'raymiz
+            await query.answer(TEXTS[lang]["exchange_selected"].format(name=take_currency["name"]))
+            return
+
+        # Juftlik to'liq tanlandi
+        context.user_data["exch_give_selected"] = None
+        await query.answer()
+        await query.edit_message_text(
+            TEXTS[lang]["exchange_pair_selected"].format(
+                give_name=give_currency["name"],
+                take_name=take_currency["name"],
+            ),
+            reply_markup=InlineKeyboardMarkup([home_button_row(lang)]),
+        )
+        # Keyingi qadam (summa kiritish, kurs hisoblash) shu yerdan davom etadi -
+        # hozircha faqat juftlik tanlovi tasdiqlanadi.
+        return
+
+    await query.answer()
 
 # --- Sozlamalar bo'limi callback'i (til/ism/telefon o'zgartirish) ---
 async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1192,6 +1291,26 @@ async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data["awaiting_currency_name"] = True
         await query.message.reply_text(
             "✍️ Yangi valyuta nomini yozing (masalan: USDT (Trc20)):"
+        )
+        return
+
+    if data.startswith("admin_curr_cat_"):
+        category = data.replace("admin_curr_cat_", "")  # "fiat" yoki "crypto"
+        if category not in ("fiat", "crypto"):
+            await query.answer()
+            return
+
+        name = context.user_data.pop("pending_currency_name", None)
+        if not name:
+            await query.answer("Xatolik: nom topilmadi, qaytadan urinib ko'ring.", show_alert=True)
+            return
+
+        add_currency(name, category)
+        cat_label = "💵 Fiat" if category == "fiat" else "🪙 Kripto"
+        await query.answer(f"✅ '{name}' ({cat_label}) qo'shildi!")
+        await query.edit_message_text(
+            "💱 Valyutalar ro'yxati:",
+            reply_markup=admin_currencies_keyboard(),
         )
         return
 
