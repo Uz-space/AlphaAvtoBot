@@ -427,39 +427,9 @@ def settings_keyboard(lang: str) -> InlineKeyboardMarkup:
     rows.append(home_button_row(lang))
     return InlineKeyboardMarkup(rows)
 
-# =========================================================
-# === "TOZA CHAT" YORDAMCHI FUNKSIYALARI ===================
-# Har bir foydalanuvchi uchun botning OXIRGI yuborgan xabari
-# context.user_data["last_bot_msg_id"] da saqlanadi. Yangi ekran
-# ko'rsatilganda avval o'sha eski xabar o'chiriladi, shunda chatda
-# xabarlar to'planib qolmaydi - faqat oxirgisi ko'rinadi.
-# =========================================================
-
-async def track_message(context: ContextTypes.DEFAULT_TYPE, message) -> None:
-    """Berilgan xabarni 'joriy bot xabari' sifatida eslab qolamiz."""
-    context.user_data["last_bot_msg_id"] = message.message_id
-
-async def clear_tracked(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
-    """Eslab qolingan oxirgi bot xabarini o'chiramiz (bo'lsa)."""
-    old_id = context.user_data.get("last_bot_msg_id")
-    if old_id:
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=old_id)
-        except Exception:
-            pass  # Xabar allaqachon o'chirilgan yoki juda eski bo'lishi mumkin
-        context.user_data["last_bot_msg_id"] = None
-
-async def send_tracked(context: ContextTypes.DEFAULT_TYPE, chat_id: int, text: str, reply_markup=None):
-    """Eski xabarni o'chirib, yangisini yuboradi va uni eslab qoladi."""
-    await clear_tracked(context, chat_id)
-    message = await context.bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
-    await track_message(context, message)
-    return message
-
 # --- /start komandasi ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
     saved_user = get_user(user_id)
 
     if saved_user:
@@ -470,11 +440,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         context.user_data["full_name"] = saved_user.get("full_name")
         context.user_data["awaiting_name"] = False
 
-        await send_tracked(context, chat_id, TEXTS[lang]["name_received"], main_menu_keyboard(lang))
+        await update.message.reply_text(
+            TEXTS[lang]["name_received"],
+            reply_markup=main_menu_keyboard(lang),
+        )
         return
 
     text = "🌐 Tilni tanlang / Тилни танланг:"
-    await send_tracked(context, chat_id, text, language_keyboard())
+    await update.message.reply_text(text, reply_markup=language_keyboard())
 
 # --- Til tanlash callback ---
 async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -500,20 +473,27 @@ async def language_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         context.user_data["lang"] = selected
         save_user(query.from_user.id, selected, phone, full_name)
 
-        await send_tracked(
-            context, query.message.chat_id,
-            TEXTS[selected]["settings_lang_changed"],
-            main_menu_keyboard(selected),
+        try:
+            await query.message.delete()
+        except Exception:
+            try:
+                await query.edit_message_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=TEXTS[selected]["settings_lang_changed"],
+            reply_markup=main_menu_keyboard(selected),
         )
         return
 
     # Aks holda - bu birinchi marta ro'yxatdan o'tish oqimi
     context.user_data["lang"] = selected
-    await track_message(context, query.message)  # bu xabarni ham "joriy" deb belgilaymiz
-    await send_tracked(
-        context, query.message.chat_id,
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(
         TEXTS[selected]["ask_phone"],
-        phone_keyboard(selected),
+        reply_markup=phone_keyboard(selected),
     )
 
 # --- Telefon raqam qabul qilish ---
@@ -525,7 +505,6 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data["lang"] = lang
 
     phone = update.message.contact.phone_number
-    chat_id = update.effective_chat.id
 
     # Agar bu "Sozlamalar"dan turib telefon o'zgartirish bo'lsa
     if context.user_data.get("awaiting_phone_change"):
@@ -535,14 +514,20 @@ async def contact_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         context.user_data["phone"] = phone
         save_user(update.effective_user.id, lang, phone, full_name)
 
-        await send_tracked(context, chat_id, TEXTS[lang]["settings_phone_changed"], main_menu_keyboard(lang))
+        await update.message.reply_text(
+            TEXTS[lang]["settings_phone_changed"],
+            reply_markup=main_menu_keyboard(lang),
+        )
         return
 
     # Aks holda - bu birinchi marta ro'yxatdan o'tish oqimi
     context.user_data["phone"] = phone
     context.user_data["awaiting_name"] = True
 
-    await send_tracked(context, chat_id, TEXTS[lang]["phone_received"], ReplyKeyboardRemove())
+    await update.message.reply_text(
+        TEXTS[lang]["phone_received"],
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
 # --- Matnli xabarlarni yo'naltirish (ism, valyuta nomi yoki menyu) ---
 # --- Matn asosiy menyu tugmalaridan biriga mos kelishini tekshirish (ikkala tildan) ---
@@ -589,10 +574,9 @@ async def name_change_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     lang = context.user_data.get("lang", "uz_latin")
     context.user_data["awaiting_name_change"] = False
     new_name = update.message.text.strip()
-    chat_id = update.effective_chat.id
 
     if not new_name:
-        await send_tracked(context, chat_id, TEXTS[lang]["settings_ask_new_name"])
+        await update.message.reply_text(TEXTS[lang]["settings_ask_new_name"])
         context.user_data["awaiting_name_change"] = True
         return
 
@@ -601,7 +585,10 @@ async def name_change_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     context.user_data["full_name"] = new_name
     save_user(update.effective_user.id, lang, phone, new_name)
 
-    await send_tracked(context, chat_id, TEXTS[lang]["settings_name_changed"], main_menu_keyboard(lang))
+    await update.message.reply_text(
+        TEXTS[lang]["settings_name_changed"],
+        reply_markup=main_menu_keyboard(lang),
+    )
 
 # --- Admin: yangi valyuta nomini qabul qilish ---
 async def currency_name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -624,10 +611,9 @@ async def support_message_handler(update: Update, context: ContextTypes.DEFAULT_
     context.user_data["awaiting_support_message"] = False
     lang = context.user_data.get("lang", "uz_latin")
     message_text = update.message.text.strip()
-    chat_id = update.effective_chat.id
 
     if not message_text:
-        await send_tracked(context, chat_id, TEXTS[lang]["support_prompt"])
+        await update.message.reply_text(TEXTS[lang]["support_prompt"])
         context.user_data["awaiting_support_message"] = True
         return
 
@@ -656,7 +642,7 @@ async def support_message_handler(update: Update, context: ContextTypes.DEFAULT_
         except Exception:
             logger.exception(f"Admin {admin_id}ga xabar yuborishda xatolik")
 
-    await send_tracked(context, chat_id, TEXTS[lang]["support_sent"])
+    await update.message.reply_text(TEXTS[lang]["support_sent"])
 
 # --- Admin: foydalanuvchiga javob yozish ---
 async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -697,7 +683,10 @@ async def name_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     user_id = update.effective_user.id
     save_user(user_id, lang, phone, full_name)
 
-    await send_tracked(context, update.effective_chat.id, TEXTS[lang]["name_received"], main_menu_keyboard(lang))
+    await update.message.reply_text(
+        TEXTS[lang]["name_received"],
+        reply_markup=main_menu_keyboard(lang),
+    )
 
 # --- Asosiy menyu tugmalari ---
 async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -730,33 +719,30 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if matched_lang != lang:
         context.user_data["lang"] = matched_lang
 
-    chat_id = update.effective_chat.id
-
-    # Foydalanuvchining tugma bosgani (yuborilgan matn xabari) ham chatda qolib
-    # ketmasin - uni o'chiramiz. (Botning eski xabari send_tracked ichida o'chadi.)
-    try:
-        await update.message.delete()
-    except Exception:
-        pass
-
     # "Valyuta ayirboshlash" alohida - inline klaviatura bilan valyutalar ro'yxatini ko'rsatamiz
     if matched_key == "exchange":
         currencies = load_currencies()
         if not currencies:
-            await send_tracked(context, chat_id, TEXTS[matched_lang]["exchange_empty"])
+            await update.message.reply_text(TEXTS[matched_lang]["exchange_empty"])
             return
-        await send_tracked(context, chat_id, TEXTS[matched_lang]["exchange_header"], exchange_keyboard(matched_lang))
+        await update.message.reply_text(
+            TEXTS[matched_lang]["exchange_header"],
+            reply_markup=exchange_keyboard(matched_lang),
+        )
         return
 
     # "Aloqa" alohida - foydalanuvchidan xabar kutamiz, keyin adminga yuboramiz
     if matched_key == "support":
         context.user_data["awaiting_support_message"] = True
-        await send_tracked(context, chat_id, TEXTS[matched_lang]["support_prompt"])
+        await update.message.reply_text(TEXTS[matched_lang]["support_prompt"])
         return
 
     # "Kurs" alohida - sotish/sotib olish kurslari ro'yxati (hozircha faqat ko'rinish)
     if matched_key == "rate":
-        await send_tracked(context, chat_id, build_rate_text(matched_lang), rate_keyboard(matched_lang))
+        await update.message.reply_text(
+            build_rate_text(matched_lang),
+            reply_markup=rate_keyboard(matched_lang),
+        )
         return
 
     # "Sozlamalar" alohida - joriy ma'lumot va o'zgartirish tugmalari
@@ -764,11 +750,14 @@ async def menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         saved_user = get_user(update.effective_user.id) or {}
         name = saved_user.get("full_name") or context.user_data.get("full_name", "")
         phone = saved_user.get("phone") or context.user_data.get("phone", "")
-        await send_tracked(context, chat_id, settings_text(matched_lang, name, phone), settings_keyboard(matched_lang))
+        await update.message.reply_text(
+            settings_text(matched_lang, name, phone),
+            reply_markup=settings_keyboard(matched_lang),
+        )
         return
 
     reply_text = TEXTS[matched_lang]["menu_replies"][matched_key]
-    await send_tracked(context, chat_id, reply_text)
+    await update.message.reply_text(reply_text)
 
 # --- Valyuta tanlash callback'i ---
 async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -782,7 +771,22 @@ async def exchange_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
     if data == "exch_home":
         await query.answer()
-        await send_tracked(context, query.message.chat_id, TEXTS[lang]["name_received"], main_menu_keyboard(lang))
+        # Almashuv xabarini butunlay o'chiramiz (ortiqcha matn qolib ketmasligi uchun)
+        # va asosiy (reply) menyuni qaytaramiz
+        try:
+            await query.message.delete()
+        except Exception:
+            # Ba'zi holatlarda xabarni o'chirib bo'lmasligi mumkin (masalan juda eski) -
+            # bunda hech bo'lmasa tugmalarni olib tashlaymiz
+            try:
+                await query.edit_message_reply_markup(reply_markup=None)
+            except Exception:
+                pass
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text=TEXTS[lang]["name_received"],
+            reply_markup=main_menu_keyboard(lang),
+        )
         return
 
     currencies = load_currencies()
@@ -816,30 +820,24 @@ async def settings_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if data == "stg_lang":
         context.user_data["changing_language"] = True
         await query.answer()
-        # Bu yerda YANGI xabar yubormaymiz - joriy panelni tahrirlaymiz (chatda ortiqcha xabar qolmasin)
-        await query.edit_message_text(
+        await query.message.reply_text(
             TEXTS[lang]["settings_choose_new_lang"],
             reply_markup=language_keyboard(),
         )
-        await track_message(context, query.message)
         return
 
     if data == "stg_name":
         context.user_data["awaiting_name_change"] = True
         await query.answer()
-        await query.edit_message_text(TEXTS[lang]["settings_ask_new_name"])
-        await track_message(context, query.message)
+        await query.message.reply_text(TEXTS[lang]["settings_ask_new_name"])
         return
 
     if data == "stg_phone":
         context.user_data["awaiting_phone_change"] = True
         await query.answer()
-        # Telefon so'rash uchun reply-klaviatura kerak (inline emas) - shuning uchun
-        # eski panelni o'chirib, yangi xabar yuboramiz
-        await send_tracked(
-            context, query.message.chat_id,
+        await query.message.reply_text(
             TEXTS[lang]["settings_ask_new_phone"],
-            phone_keyboard(lang),
+            reply_markup=phone_keyboard(lang),
         )
         return
 
