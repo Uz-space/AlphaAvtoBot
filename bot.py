@@ -296,6 +296,7 @@ async def auto_refresh():
             # Barcha active xabarlarni yangilash
             for chat_id, message_id in list(main_messages.items()):
                 try:
+                    # Rich message ni edit qilish
                     await bot.edit_message_rich(
                         chat_id=chat_id,
                         message_id=message_id,
@@ -304,8 +305,9 @@ async def auto_refresh():
                     )
                 except Exception as e:
                     # Agar xabar o'chirilgan bo'lsa, ro'yxatdan o'chiramiz
-                    if "message to edit not found" in str(e):
-                        del main_messages[chat_id]
+                    if "message to edit not found" in str(e) or "message is not modified" in str(e):
+                        if chat_id in main_messages:
+                            del main_messages[chat_id]
                     pass
         except Exception as e:
             logging.error(f"Auto refresh error: {e}")
