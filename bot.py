@@ -175,9 +175,7 @@ def build_keyboard() -> InlineKeyboardMarkup:
     if row:
         buttons.append(row)
 
-    buttons.append([InlineKeyboardButton(text="🌐 Proxies",       callback_data="proxies")])
-    buttons.append([InlineKeyboardButton(text="📊 Stats & Balance", callback_data="stats")])
-    buttons.append([InlineKeyboardButton(text="💳 Subscription",   callback_data="subscription")])
+    # Faqat Settings va Refresh tugmalari qoldi
     buttons.append([
         InlineKeyboardButton(text="⚙️ Settings", callback_data="settings"),
         InlineKeyboardButton(text="🔄",           callback_data="refresh"),
@@ -541,24 +539,6 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
             reply_markup=build_keyboard()
         )
     await call.answer("❌ Cancelled.")
-
-
-# ─── Proxies ─────────────────────────────────────────────────────────────────
-@dp.callback_query(F.data == "proxies")
-async def cb_proxies(call: CallbackQuery):
-    await call.answer("🌐 Proxies (coming soon...)", show_alert=False)
-
-
-# ─── Stats ───────────────────────────────────────────────────────────────────
-@dp.callback_query(F.data == "stats")
-async def cb_stats(call: CallbackQuery):
-    await call.answer("📊 Stats & Balance (coming soon...)", show_alert=False)
-
-
-# ─── Subscription ────────────────────────────────────────────────────────────
-@dp.callback_query(F.data == "subscription")
-async def cb_subscription(call: CallbackQuery):
-    await call.answer("💳 Subscription (coming soon...)", show_alert=False)
 
 
 # ─── Settings ────────────────────────────────────────────────────────────────
