@@ -162,6 +162,8 @@ def build_main_rich_message() -> InputRichMessage:
 def build_keyboard() -> InlineKeyboardMarkup:
     buttons = []
     row = []
+    
+    # 1-5 qatorlar: Kran tugmalari (har bir qatorda 2 tadan)
     for c in CRANES:
         icon = "🟢" if c["active"] else "⚠️"
         btn = InlineKeyboardButton(
@@ -175,14 +177,17 @@ def build_keyboard() -> InlineKeyboardMarkup:
     if row:
         buttons.append(row)
 
-    # Settings va Support tugmalari
+    # 6-qator: Support tugmasi
+    buttons.append([
+        InlineKeyboardButton(text="🆘 Support", url="https://t.me/alphadevlab"),
+    ])
+
+    # 7-qator: Settings va Refresh tugmalari (eng oxirida)
     buttons.append([
         InlineKeyboardButton(text="⚙️ Settings", callback_data="settings"),
         InlineKeyboardButton(text="🔄",           callback_data="refresh"),
     ])
-    buttons.append([
-        InlineKeyboardButton(text="🆘 Support", url="https://t.me/alphadevlab"),
-    ])
+    
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
