@@ -80,9 +80,22 @@ def skip_ua_keyboard():
 
 
 def format_countdown(seconds: float) -> str:
+    """Format seconds to MM:SS"""
     seconds = max(0, int(seconds))
     minutes, secs = divmod(seconds, 60)
     return f"{minutes:02d}:{secs:02d}"
+
+
+def get_countdown(next_claim_at) -> str:
+    """Calculate real-time countdown"""
+    if not next_claim_at:
+        return "--:--"
+    
+    remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
+    if remaining <= 0:
+        return "Ready"
+    
+    return format_countdown(remaining)
 
 
 def add_log(crane: dict, text: str):
@@ -128,15 +141,8 @@ def build_main_rich_message() -> InputRichMessage:
                 email = acc.get("email", "Unknown")
                 balance = acc.get("balance", 0.0)
                 
-                next_claim_at = acc.get("next_claim_at")
-                if next_claim_at:
-                    remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
-                    if remaining > 0:
-                        countdown = format_countdown(remaining)
-                    else:
-                        countdown = "Ready"
-                else:
-                    countdown = "--:--"
+                # Real vaqtda countdown
+                countdown = get_countdown(acc.get("next_claim_at"))
                 
                 rows.append([
                     cell(email),
@@ -206,15 +212,8 @@ def build_trx_stats_text(crane: dict) -> str:
         email = acc.get("email", "Unknown")[:15]
         balance = acc.get("balance", 0.0)
         
-        next_claim_at = acc.get("next_claim_at")
-        if next_claim_at:
-            remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
-            if remaining > 0:
-                countdown = format_countdown(remaining)
-            else:
-                countdown = "Ready"
-        else:
-            countdown = "--:--"
+        # Real vaqtda countdown
+        countdown = get_countdown(acc.get("next_claim_at"))
             
         lines.append(f"{email:<15} {countdown:<12} {balance:<15.6f}")
     
@@ -471,6 +470,9 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
         await state.clear()
         return
 
+    # 60 daqiqa (3600 sekund) vaqt qo'yamiz
+    next_claim_time = datetime.now(timezone.utc) + timedelta(minutes=60)
+
     new_acc = {
         "label": label,
         "email": email,
@@ -479,7 +481,7 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
         "ua": ua,
         "active": True,
         "balance": 0.0,
-        "next_claim_at": datetime.now(timezone.utc) + timedelta(minutes=45),
+        "next_claim_at": next_claim_time,
     }
     crane["accounts"].append(new_acc)
     crane["active"] = True
@@ -497,7 +499,8 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
         f"Email: {email}\n"
         f"Password: ✅\n"
         f"Cookies: {cookies_icon}\n"
-        f"UA: {ua_icon}"
+        f"UA: {ua_icon}\n\n"
+        f"⏱️ Next claim in: 60:00"
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
