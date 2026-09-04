@@ -115,12 +115,14 @@ def build_main_rich_message() -> InputRichMessage:
         accounts = crane.get("accounts", [])
         
         if not accounts:
+            # Akkaunt yo'q - kran nomi bilan
             rows.append([
                 cell(crane['name']),
                 cell("0.000000", align="right"),
                 cell("--:--", align="center"),
             ])
         else:
+            # Har bir akkaunt uchun alohida qator
             for acc in accounts:
                 email = acc.get("email", "Unknown")
                 balance = acc.get("balance", 0.0)
@@ -196,11 +198,12 @@ def build_trx_stats_text(crane: dict) -> str:
         return "No accounts yet."
     
     lines = []
+    # Header - bir xil uzunlikda
     lines.append(f"{'Account':<15} {'Balance':<15} {'Next Claim':<12}")
     lines.append("-" * 42)
     
     for acc in accounts:
-        email = acc.get("email", "")[:15]
+        email = acc.get("email", "Unknown")[:15]
         balance = acc.get("balance", 0.0)
         
         next_claim_at = acc.get("next_claim_at")
@@ -212,7 +215,8 @@ def build_trx_stats_text(crane: dict) -> str:
                 countdown = "Ready"
         else:
             countdown = "--:--"
-            
+        
+        # Har bir qator bir xil uzunlikda
         lines.append(f"{email:<15} {balance:<15.6f} {countdown:<12}")
     
     return "\n".join(lines)
