@@ -103,7 +103,7 @@ async def require_text(message: Message) -> str | None:
 
 # ─── RICH TABLE - Asosiy dashboard (faqat 3 ta ustun) ──────────────────────
 def build_main_rich_message() -> InputRichMessage:
-    """Asosiy dashboard - faqat 3 ta ustun: ACCOUNT, BALANCE, NEXT CLAIM IN"""
+    """Asosiy dashboard - faqat 3 ta ustun: ACCOUNT, BALANCE, NEXT CLAIM"""
     
     def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
@@ -111,8 +111,8 @@ def build_main_rich_message() -> InputRichMessage:
     # Table headers - faqat 3 ta ustun
     rows = [[
         cell("ACCOUNT", header=True),
-        cell("BALANCE (TRX)", header=True, align="right"),
-        cell("NEXT CLAIM IN", header=True, align="center"),
+        cell("BALANCE", header=True, align="right"),
+        cell("NEXT CLAIM", header=True, align="center"),
     ]]
 
     # Har bir kran uchun ma'lumotlar
@@ -210,7 +210,7 @@ def build_trx_stats_text(crane: dict) -> str:
         return "No accounts yet."
     
     lines = []
-    lines.append(f"{'Account':<15} {'Balance (TRX)':<15} {'Next Claim':<12}")
+    lines.append(f"{'Account':<15} {'Balance':<15} {'Next Claim':<12}")
     lines.append("─" * 42)
     
     for acc in accounts:
