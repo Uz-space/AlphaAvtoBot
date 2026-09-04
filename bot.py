@@ -283,15 +283,44 @@ def build_crane_rich_message(crane: dict) -> InputRichMessage:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+# ─── Xabarlarni saqlash uchun ──────────────────────────────────────────────
+main_messages = {}  # chat_id -> message_id
+
+
+# ─── Auto refresh timer ─────────────────────────────────────────────────────
+async def auto_refresh():
+    """Har 1 sekundda avtomatik yangilaydi"""
+    while True:
+        await asyncio.sleep(1)
+        try:
+            # Barcha active xabarlarni yangilash
+            for chat_id, message_id in list(main_messages.items()):
+                try:
+                    await bot.edit_message_rich(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        rich_message=build_main_rich_message(),
+                        reply_markup=build_keyboard()
+                    )
+                except Exception as e:
+                    # Agar xabar o'chirilgan bo'lsa, ro'yxatdan o'chiramiz
+                    if "message to edit not found" in str(e):
+                        del main_messages[chat_id]
+                    pass
+        except Exception as e:
+            logging.error(f"Auto refresh error: {e}")
+
 
 # ─── /start ──────────────────────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer_rich(
+    msg = await message.answer_rich(
         rich_message=build_main_rich_message(),
         reply_markup=build_keyboard()
     )
+    # Xabarni ro'yxatga qo'shamiz
+    main_messages[message.chat.id] = msg.message_id
 
 
 # ─── /cancel ─────────────────────────────────────────────────────────────────
@@ -314,11 +343,16 @@ async def cmd_cancel(message: Message, state: FSMContext):
 @dp.callback_query(F.data == "refresh")
 async def cb_refresh(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.delete()
-    await call.message.answer_rich(
+    try:
+        await call.message.delete()
+    except:
+        pass
+    msg = await call.message.answer_rich(
         rich_message=build_main_rich_message(),
         reply_markup=build_keyboard()
     )
+    # Xabarni ro'yxatga yangilaymiz
+    main_messages[call.message.chat.id] = msg.message_id
     await call.answer("♻️ Updated!")
 
 
@@ -326,11 +360,16 @@ async def cb_refresh(call: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "back_main")
 async def cb_back_main(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    await call.message.delete()
-    await call.message.answer_rich(
+    try:
+        await call.message.delete()
+    except:
+        pass
+    msg = await call.message.answer_rich(
         rich_message=build_main_rich_message(),
         reply_markup=build_keyboard()
     )
+    # Xabarni ro'yxatga yangilaymiz
+    main_messages[call.message.chat.id] = msg.message_id
     await call.answer()
 
 
@@ -343,6 +382,9 @@ async def cb_crane(call: CallbackQuery, state: FSMContext):
         await call.answer("Not found!", show_alert=True)
         return
     await call.message.delete()
+    # Crane panelga o'tganda main xabarni ro'yxatdan o'chiramiz
+    if call.message.chat.id in main_messages:
+        del main_messages[call.message.chat.id]
     await call.message.answer_rich(
         rich_message=build_crane_rich_message(crane),
         reply_markup=build_crane_keyboard(crane_name),
@@ -546,10 +588,11 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
         )
     else:
         await call.message.delete()
-        await call.message.answer_rich(
+        msg = await call.message.answer_rich(
             rich_message=build_main_rich_message(),
             reply_markup=build_keyboard()
         )
+        main_messages[call.message.chat.id] = msg.message_id
     await call.answer("❌ Cancelled.")
 
 
@@ -561,6 +604,8 @@ async def cb_settings(call: CallbackQuery):
 
 # ─── Startup ─────────────────────────────────────────────────────────────────
 async def main():
+    # Auto refreshni ishga tushiramiz
+    asyncio.create_task(auto_refresh())
     await dp.start_polling(bot)
 
 
