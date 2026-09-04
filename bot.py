@@ -101,43 +101,31 @@ async def require_text(message: Message) -> str | None:
     return message.text.strip()
 
 
-# ─── Matn generatsiyasi ──────────────────────────────────────────────────────
-def build_message_text() -> str:
-    lines = []
-    for c in CRANES:
-        name_upper = c["name"].upper()
-        if c["active"]:
-            mult = f" | 🟢 {c['multiplier']}" if c["multiplier"] else ""
-            line = f"{c['emoji']} {name_upper} ✅ [∞]{mult} ({c['claims']}/{c['max_claims']})"
-        else:
-            line = f"{c['emoji']} {name_upper} ⚠️ [∞] | ▪️ (0/{c['max_claims']})"
-        lines.append(line)
-
-    text = "\n".join(lines)
-    text += "\n\n"
-
-    api_icon = "✅" if API_STATE["connected"] else "❌"
-    text += f"🔑 API: {api_icon} ({API_STATE['domain']})\n"
-
-    if API_STATE["connected"] and API_STATE["accounts"] != 0:
-        acc_str    = "∞" if API_STATE["accounts"] == -1 else str(API_STATE["accounts"])
-        claims_str = str(API_STATE["total_claims"]) if API_STATE["total_claims"] > 0 else "0"
-        text += f"🆓 {API_STATE['plan']} | {acc_str} accounts | {claims_str} claims\n"
-
-    # ─── Barcha kranlarning TRX statistikasi (RICH TABLE) ──────────────────
-    text += "\n📊 TRX Stats Overview\n"
-    text += "─" * 32 + "\n"
+# ─── RICH MESSAGE - Asosiy dashboard (faqat rich table) ─────────────────────
+def build_main_rich_message() -> InputRichMessage:
+    """Asosiy dashboard - faqat TRX statistikasi jadvali"""
     
+    def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
+        return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
+
     # Table headers
-    text += f"{'Crane':<12} {'Active':<8} {'Balance':<15} {'Next Claim':<12}\n"
-    text += "─" * 50 + "\n"
-    
+    rows = [[
+        cell("CRANE", header=True),
+        cell("STATUS", header=True, align="center"),
+        cell("ACTIVE", header=True, align="center"),
+        cell("BALANCE (TRX)", header=True, align="right"),
+        cell("NEXT CLAIM", header=True, align="center"),
+    ]]
+
     for crane in CRANES:
         accounts = crane.get("accounts", [])
         active_count = sum(1 for a in accounts if a.get("active", False))
         total_balance = sum(acc.get("balance", 0.0) for acc in accounts)
         
-        # Next claim time (first active account's next claim)
+        # Status
+        status = "🟢 Active" if crane["active"] else "⚠️ Inactive"
+        
+        # Next claim time
         next_claim = "--:--"
         for acc in accounts:
             if acc.get("active") and acc.get("next_claim_at"):
@@ -148,19 +136,23 @@ def build_message_text() -> str:
                 else:
                     next_claim = "🔓 Ready"
                     break
-            
-        text += f"{crane['emoji']} {crane['name']:<8} {active_count:<8} {total_balance:<15.6f} {next_claim:<12}\n"
+        
+        rows.append([
+            cell(f"{crane['emoji']} {crane['name']}"),
+            cell(status, align="center"),
+            cell(str(active_count), align="center"),
+            cell(f"{total_balance:.6f}", align="right"),
+            cell(next_claim, align="center"),
+        ])
+
+    # Create rich message with only the table
+    table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
     
-    text += "\n📡 LIVE LOG\n"
-    text += "─" * 32 + "\n"
-
-    if LIVE_LOG["log_text"]:
-        text += f"{LIVE_LOG['crane_emoji']} {LIVE_LOG['crane_name'].upper()}\n"
-        text += LIVE_LOG["log_text"]
-    else:
-        text += "⏳ No claims yet..."
-
-    return text
+    return InputRichMessage(blocks=[
+        InputRichBlockParagraph(text=[RichTextBold(text="📊 TRX Stats Dashboard")]),
+        table,
+        InputRichBlockParagraph(text="\n💡 Tap a crane button below to manage accounts")
+    ])
 
 
 def build_keyboard() -> InlineKeyboardMarkup:
@@ -199,49 +191,9 @@ def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
     ])
 
 
-# ─── Rich Table (faqat asosiy dashboard uchun) ──────────────────────────────
-def build_trx_stats_rich_table() -> InputRichBlockTable:
-    """Barcha kranlar uchun TRX statistikasi jadvali"""
-    
-    def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
-        return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
-
-    rows = [[
-        cell("CRANE", header=True),
-        cell("ACTIVE", header=True, align="center"),
-        cell("BALANCE (TRX)", header=True, align="right"),
-        cell("NEXT CLAIM", header=True, align="center"),
-    ]]
-
-    for crane in CRANES:
-        accounts = crane.get("accounts", [])
-        active_count = sum(1 for a in accounts if a.get("active", False))
-        total_balance = sum(acc.get("balance", 0.0) for acc in accounts)
-        
-        # Next claim time
-        next_claim = "--:--"
-        for acc in accounts:
-            if acc.get("active") and acc.get("next_claim_at"):
-                remaining = (acc["next_claim_at"] - datetime.now(timezone.utc)).total_seconds()
-                if remaining > 0:
-                    next_claim = format_countdown(remaining)
-                    break
-                else:
-                    next_claim = "🔓 Ready"
-                    break
-        
-        rows.append([
-            cell(f"{crane['emoji']} {crane['name']}"),
-            cell(str(active_count), align="center"),
-            cell(f"{total_balance:.6f}", align="right"),
-            cell(next_claim, align="center"),
-        ])
-
-    return InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
-
-
+# ─── Crane panel uchun matnli statistika ─────────────────────────────────────
 def build_trx_stats_text(crane: dict) -> str:
-    """Faqat matnli statistikani qaytaradi (rich table emas) - crane panel uchun"""
+    """Faqat matnli statistikani qaytaradi - crane panel uchun"""
     accounts = crane.get("accounts", [])
     
     if not accounts:
@@ -302,7 +254,7 @@ def build_crane_rich_message(crane: dict) -> InputRichMessage:
     else:
         blocks.append(InputRichBlockParagraph(text="No active accounts — tap + to add"))
 
-    # ─── O'ZGARTIRILGAN QISM: TRX Stats endi matnli formatda ──────────────
+    # TRX Stats - matnli formatda
     blocks.append(InputRichBlockSectionHeading(text="📊 TRX Stats", size=4))
     stats_text = build_trx_stats_text(crane)
     blocks.append(InputRichBlockPreformatted(text=stats_text))
@@ -322,10 +274,9 @@ dp  = Dispatcher(storage=MemoryStorage())
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer(
-        text=build_message_text(),
-        reply_markup=build_keyboard(),
-        parse_mode=None
+    await message.answer_rich(
+        rich_message=build_main_rich_message(),
+        reply_markup=build_keyboard()
     )
 
 
@@ -350,10 +301,9 @@ async def cmd_cancel(message: Message, state: FSMContext):
 async def cb_refresh(call: CallbackQuery, state: FSMContext):
     await state.clear()
     await call.message.delete()
-    await call.message.answer(
-        text=build_message_text(),
-        reply_markup=build_keyboard(),
-        parse_mode=None
+    await call.message.answer_rich(
+        rich_message=build_main_rich_message(),
+        reply_markup=build_keyboard()
     )
     await call.answer("♻️ Updated!")
 
@@ -363,10 +313,9 @@ async def cb_refresh(call: CallbackQuery, state: FSMContext):
 async def cb_back_main(call: CallbackQuery, state: FSMContext):
     await state.clear()
     await call.message.delete()
-    await call.message.answer(
-        text=build_message_text(),
-        reply_markup=build_keyboard(),
-        parse_mode=None
+    await call.message.answer_rich(
+        rich_message=build_main_rich_message(),
+        reply_markup=build_keyboard()
     )
     await call.answer()
 
@@ -584,10 +533,9 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
         )
     else:
         await call.message.delete()
-        await call.message.answer(
-            text=build_message_text(),
-            reply_markup=build_keyboard(),
-            parse_mode=None
+        await call.message.answer_rich(
+            rich_message=build_main_rich_message(),
+            reply_markup=build_keyboard()
         )
     await call.answer("❌ Cancelled.")
 
