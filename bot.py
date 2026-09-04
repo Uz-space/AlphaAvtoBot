@@ -46,6 +46,10 @@ LIVE_LOG = {
     "log_text": "",
 }
 
+# ─── Global timer start vaqti ──────────────────────────────────────────────
+TIMER_START = datetime.now(timezone.utc)
+TIMER_DURATION = 60  # daqiqa
+
 # ─── FSM States ──────────────────────────────────────────────────────────────
 class AddAccount(StatesGroup):
     email    = State()
@@ -86,10 +90,17 @@ def format_countdown(seconds: float) -> str:
     return f"{minutes:02d}:{secs:02d}"
 
 
-def get_countdown(next_claim_at) -> str:
-    """Calculate real-time countdown"""
+def get_global_countdown() -> str:
+    """Global timer - har doim 60 daqiqadan boshlab sanaydi"""
+    elapsed = (datetime.now(timezone.utc) - TIMER_START).total_seconds()
+    remaining = max(0, TIMER_DURATION * 60 - elapsed)
+    return format_countdown(remaining)
+
+
+def get_account_countdown(next_claim_at) -> str:
+    """Account timer - akkaunt qo'shilgan vaqtdan boshlab sanaydi"""
     if not next_claim_at:
-        return "--:--"
+        return get_global_countdown()  # Akkaunt yo'q bo'lsa global timer
     
     remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
     if remaining <= 0:
@@ -125,14 +136,21 @@ def build_main_rich_message() -> InputRichMessage:
         cell("BALANCE", header=True, align="right"),
     ]]
 
+    # Global timer qatori
+    rows.append([
+        cell("⏱️ Global Timer"),
+        cell(get_global_countdown(), align="center"),
+        cell("", align="right"),
+    ])
+
     for crane in CRANES:
         accounts = crane.get("accounts", [])
         
         if not accounts:
-            # Akkaunt yo'q - faqat kran nomi
+            # Akkaunt yo'q - kran nomi va global timer
             rows.append([
-                cell(crane['name']),
-                cell("--:--", align="center"),
+                cell(f"{crane['emoji']} {crane['name']}"),
+                cell(get_global_countdown(), align="center"),
                 cell("0.000000", align="right"),
             ])
         else:
@@ -141,11 +159,11 @@ def build_main_rich_message() -> InputRichMessage:
                 email = acc.get("email", "Unknown")
                 balance = acc.get("balance", 0.0)
                 
-                # Real vaqtda countdown
-                countdown = get_countdown(acc.get("next_claim_at"))
+                # Akkaunt timeri yoki global timer
+                countdown = get_account_countdown(acc.get("next_claim_at"))
                 
                 rows.append([
-                    cell(email),
+                    cell(f"{crane['emoji']} {email}"),
                     cell(countdown, align="center"),
                     cell(f"{balance:.6f}", align="right"),
                 ])
@@ -201,21 +219,23 @@ def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
 def build_trx_stats_text(crane: dict) -> str:
     accounts = crane.get("accounts", [])
     
-    if not accounts:
-        return "No accounts yet."
-    
     lines = []
     lines.append(f"{'Account':<15} {'Next Claim':<12} {'Balance':<15}")
     lines.append("-" * 42)
     
-    for acc in accounts:
-        email = acc.get("email", "Unknown")[:15]
-        balance = acc.get("balance", 0.0)
-        
-        # Real vaqtda countdown
-        countdown = get_countdown(acc.get("next_claim_at"))
+    # Crane uchun global timer
+    lines.append(f"{'⏱️ Global Timer':<15} {get_global_countdown():<12} {'':<15}")
+    
+    if not accounts:
+        lines.append(f"{crane['name']:<15} {get_global_countdown():<12} {'0.000000':<15}")
+    else:
+        for acc in accounts:
+            email = acc.get("email", "Unknown")[:15]
+            balance = acc.get("balance", 0.0)
             
-        lines.append(f"{email:<15} {countdown:<12} {balance:<15.6f}")
+            countdown = get_account_countdown(acc.get("next_claim_at"))
+            
+            lines.append(f"{email:<15} {countdown:<12} {balance:<15.6f}")
     
     return "\n".join(lines)
 
@@ -470,7 +490,7 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
         await state.clear()
         return
 
-    # 60 daqiqa (3600 sekund) vaqt qo'yamiz
+    # Akkaunt uchun 60 daqiqa vaqt
     next_claim_time = datetime.now(timezone.utc) + timedelta(minutes=60)
 
     new_acc = {
