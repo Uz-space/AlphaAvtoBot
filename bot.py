@@ -105,10 +105,11 @@ def build_main_rich_message() -> InputRichMessage:
     def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
 
-    # Faqat 2 ta ustun: ACCOUNT va NEXT CLAIM
+    # 3 ta ustun: ACCOUNT, NEXT CLAIM, BALANCE
     rows = [[
         cell("ACCOUNT", header=True),
         cell("NEXT CLAIM", header=True, align="center"),
+        cell("BALANCE", header=True, align="right"),
     ]]
 
     for crane in CRANES:
@@ -119,11 +120,13 @@ def build_main_rich_message() -> InputRichMessage:
             rows.append([
                 cell(crane['name']),
                 cell("--:--", align="center"),
+                cell("0.000000", align="right"),
             ])
         else:
             # Har bir akkaunt uchun alohida qator
             for acc in accounts:
                 email = acc.get("email", "Unknown")
+                balance = acc.get("balance", 0.0)
                 
                 next_claim_at = acc.get("next_claim_at")
                 if next_claim_at:
@@ -138,6 +141,7 @@ def build_main_rich_message() -> InputRichMessage:
                 rows.append([
                     cell(email),
                     cell(countdown, align="center"),
+                    cell(f"{balance:.6f}", align="right"),
                 ])
 
     table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
@@ -195,11 +199,12 @@ def build_trx_stats_text(crane: dict) -> str:
         return "No accounts yet."
     
     lines = []
-    lines.append(f"{'Account':<20} {'Next Claim':<12}")
-    lines.append("-" * 32)
+    lines.append(f"{'Account':<15} {'Next Claim':<12} {'Balance':<15}")
+    lines.append("-" * 42)
     
     for acc in accounts:
-        email = acc.get("email", "Unknown")[:20]
+        email = acc.get("email", "Unknown")[:15]
+        balance = acc.get("balance", 0.0)
         
         next_claim_at = acc.get("next_claim_at")
         if next_claim_at:
@@ -211,7 +216,7 @@ def build_trx_stats_text(crane: dict) -> str:
         else:
             countdown = "--:--"
             
-        lines.append(f"{email:<20} {countdown:<12}")
+        lines.append(f"{email:<15} {countdown:<12} {balance:<15.6f}")
     
     return "\n".join(lines)
 
