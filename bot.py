@@ -175,10 +175,13 @@ def build_keyboard() -> InlineKeyboardMarkup:
     if row:
         buttons.append(row)
 
-    # Faqat Settings va Refresh tugmalari qoldi
+    # Settings va Support tugmalari
     buttons.append([
         InlineKeyboardButton(text="⚙️ Settings", callback_data="settings"),
         InlineKeyboardButton(text="🔄",           callback_data="refresh"),
+    ])
+    buttons.append([
+        InlineKeyboardButton(text="🆘 Support", callback_data="support"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -545,6 +548,21 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "settings")
 async def cb_settings(call: CallbackQuery):
     await call.answer("⚙️ Settings (coming soon...)", show_alert=False)
+
+
+# ─── Support ─────────────────────────────────────────────────────────────────
+@dp.callback_query(F.data == "support")
+async def cb_support(call: CallbackQuery):
+    await call.message.answer(
+        text=(
+            "🆘 <b>Support</b>\n\n"
+            "If you have any questions or issues, contact our support team:\n\n"
+            "👤 <b>@alphadevlab</b>\n\n"
+            "We will respond as soon as possible! 💪"
+        ),
+        parse_mode="HTML"
+    )
+    await call.answer()
 
 
 # ─── Startup ─────────────────────────────────────────────────────────────────
