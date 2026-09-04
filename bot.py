@@ -79,6 +79,28 @@ def skip_ua_keyboard():
     ])
 
 
+def format_countdown(seconds: float) -> str:
+    seconds = max(0, int(seconds))
+    minutes, secs = divmod(seconds, 60)
+    return f"{minutes:02d}:{secs:02d}"
+
+
+def add_log(crane: dict, text: str):
+    crane.setdefault("logs", []).append({
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "text": text,
+    })
+    crane["logs"] = crane["logs"][-20:]
+
+
+async def require_text(message: Message) -> str | None:
+    """Returns stripped text, or None (and warns the user) if the message has no text."""
+    if not message.text:
+        await message.answer("⚠️ Please send plain text, not a photo/sticker/file.\n\n/cancel to abort.")
+        return None
+    return message.text.strip()
+
+
 # ─── Matn generatsiyasi ──────────────────────────────────────────────────────
 def build_message_text() -> str:
     lines = []
@@ -102,6 +124,33 @@ def build_message_text() -> str:
         claims_str = str(API_STATE["total_claims"]) if API_STATE["total_claims"] > 0 else "0"
         text += f"🆓 {API_STATE['plan']} | {acc_str} accounts | {claims_str} claims\n"
 
+    # ─── Barcha kranlarning TRX statistikasi (RICH TABLE) ──────────────────
+    text += "\n📊 TRX Stats Overview\n"
+    text += "─" * 32 + "\n"
+    
+    # Table headers
+    text += f"{'Crane':<12} {'Active':<8} {'Balance':<15} {'Next Claim':<12}\n"
+    text += "─" * 50 + "\n"
+    
+    for crane in CRANES:
+        accounts = crane.get("accounts", [])
+        active_count = sum(1 for a in accounts if a.get("active", False))
+        total_balance = sum(acc.get("balance", 0.0) for acc in accounts)
+        
+        # Next claim time (first active account's next claim)
+        next_claim = "--:--"
+        for acc in accounts:
+            if acc.get("active") and acc.get("next_claim_at"):
+                remaining = (acc["next_claim_at"] - datetime.now(timezone.utc)).total_seconds()
+                if remaining > 0:
+                    next_claim = format_countdown(remaining)
+                    break
+                else:
+                    next_claim = "🔓 Ready"
+                    break
+            
+        text += f"{crane['emoji']} {crane['name']:<8} {active_count:<8} {total_balance:<15.6f} {next_claim:<12}\n"
+    
     text += "\n📡 LIVE LOG\n"
     text += "─" * 32 + "\n"
 
@@ -150,57 +199,76 @@ def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
     ])
 
 
-def format_countdown(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    minutes, secs = divmod(seconds, 60)
-    return f"{minutes:02d}:{secs:02d}"
-
-
-def add_log(crane: dict, text: str):
-    crane.setdefault("logs", []).append({
-        "time": datetime.now().strftime("%H:%M:%S"),
-        "text": text,
-    })
-    crane["logs"] = crane["logs"][-20:]
-
-
-async def require_text(message: Message) -> str | None:
-    """Returns stripped text, or None (and warns the user) if the message has no text."""
-    if not message.text:
-        await message.answer("⚠️ Please send plain text, not a photo/sticker/file.\n\n/cancel to abort.")
-        return None
-    return message.text.strip()
-
-
-def build_trx_stats_rich_table(crane: dict) -> InputRichBlockTable:
-    accounts = crane.get("accounts", [])
-
+# ─── Rich Table (faqat asosiy dashboard uchun) ──────────────────────────────
+def build_trx_stats_rich_table() -> InputRichBlockTable:
+    """Barcha kranlar uchun TRX statistikasi jadvali"""
+    
     def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
 
     rows = [[
-        cell("ACCOUNT", header=True),
+        cell("CRANE", header=True),
+        cell("ACTIVE", header=True, align="center"),
         cell("BALANCE (TRX)", header=True, align="right"),
-        cell("NEXT CLAIM IN", header=True, align="center"),
+        cell("NEXT CLAIM", header=True, align="center"),
     ]]
 
-    if not accounts:
-        rows.append([cell("No accounts yet."), cell(""), cell("")])
-    else:
+    for crane in CRANES:
+        accounts = crane.get("accounts", [])
+        active_count = sum(1 for a in accounts if a.get("active", False))
+        total_balance = sum(acc.get("balance", 0.0) for acc in accounts)
+        
+        # Next claim time
+        next_claim = "--:--"
         for acc in accounts:
-            next_claim_at = acc.get("next_claim_at")
-            if next_claim_at:
-                remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
-                countdown = format_countdown(remaining)
-            else:
-                countdown = "--:--"
-            rows.append([
-                cell(acc.get("email", "")),
-                cell(f"{acc.get('balance', 0.0):.6f}", align="right"),
-                cell(countdown, align="center"),
-            ])
+            if acc.get("active") and acc.get("next_claim_at"):
+                remaining = (acc["next_claim_at"] - datetime.now(timezone.utc)).total_seconds()
+                if remaining > 0:
+                    next_claim = format_countdown(remaining)
+                    break
+                else:
+                    next_claim = "🔓 Ready"
+                    break
+        
+        rows.append([
+            cell(f"{crane['emoji']} {crane['name']}"),
+            cell(str(active_count), align="center"),
+            cell(f"{total_balance:.6f}", align="right"),
+            cell(next_claim, align="center"),
+        ])
 
     return InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
+
+
+def build_trx_stats_text(crane: dict) -> str:
+    """Faqat matnli statistikani qaytaradi (rich table emas) - crane panel uchun"""
+    accounts = crane.get("accounts", [])
+    
+    if not accounts:
+        return "No accounts yet."
+    
+    lines = []
+    lines.append(f"{'Account':<15} {'Status':<8} {'Balance (TRX)':<15} {'Next Claim':<12}")
+    lines.append("─" * 50)
+    
+    for acc in accounts:
+        email = acc.get("email", "")[:15]
+        status = "🟢" if acc.get("active") else "🔴"
+        balance = acc.get("balance", 0.0)
+        
+        next_claim_at = acc.get("next_claim_at")
+        if next_claim_at:
+            remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
+            if remaining > 0:
+                countdown = format_countdown(remaining)
+            else:
+                countdown = "🔓 Ready"
+        else:
+            countdown = "--:--"
+            
+        lines.append(f"{email:<15} {status:<8} {balance:<15.6f} {countdown:<12}")
+    
+    return "\n".join(lines)
 
 
 def build_live_logs_rich_block(crane: dict) -> InputRichBlockPreformatted:
@@ -234,8 +302,11 @@ def build_crane_rich_message(crane: dict) -> InputRichMessage:
     else:
         blocks.append(InputRichBlockParagraph(text="No active accounts — tap + to add"))
 
+    # ─── O'ZGARTIRILGAN QISM: TRX Stats endi matnli formatda ──────────────
     blocks.append(InputRichBlockSectionHeading(text="📊 TRX Stats", size=4))
-    blocks.append(build_trx_stats_rich_table(crane))
+    stats_text = build_trx_stats_text(crane)
+    blocks.append(InputRichBlockPreformatted(text=stats_text))
+    
     blocks.append(InputRichBlockSectionHeading(text="📡 Live Logs", size=4))
     blocks.append(build_live_logs_rich_block(crane))
 
