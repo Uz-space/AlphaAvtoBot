@@ -181,11 +181,24 @@ def build_keyboard() -> InlineKeyboardMarkup:
     row = []
     
     for c in CRANES:
-        icon = "🟢" if c["active"] else "⚠️"
-        btn = InlineKeyboardButton(
-            text=f"{icon} {c['name']}",
-            callback_data=f"crane_{c['name']}"
-        )
+        # Akkaunt bor yoki yo'qligini tekshiramiz
+        has_account = len(c.get("accounts", [])) > 0
+        
+        # Rangli tugma
+        if has_account:
+            # Yashil - success
+            btn = InlineKeyboardButton(
+                text=f"🟢 {c['name']}",
+                callback_data=f"crane_{c['name']}",
+                style="success"  # yashil
+            )
+        else:
+            # Qizil - danger
+            btn = InlineKeyboardButton(
+                text=f"🔴 {c['name']}",
+                callback_data=f"crane_{c['name']}",
+                style="danger"  # qizil
+            )
         row.append(btn)
         if len(row) == 2:
             buttons.append(row)
@@ -193,13 +206,27 @@ def build_keyboard() -> InlineKeyboardMarkup:
     if row:
         buttons.append(row)
 
+    # Support tugmasi - QIZIL (danger)
     buttons.append([
-        InlineKeyboardButton(text="🆘 Support", url="https://t.me/alphadevlab"),
+        InlineKeyboardButton(
+            text="🆘 Support",
+            url="https://t.me/alphadevlab",
+            style="danger"  # qizil
+        ),
     ])
 
+    # Settings - KO'K (primary), Refresh - KO'K (primary)
     buttons.append([
-        InlineKeyboardButton(text="⚙️ Settings", callback_data="settings"),
-        InlineKeyboardButton(text="🔄", callback_data="refresh"),
+        InlineKeyboardButton(
+            text="⚙️ Settings",
+            callback_data="settings",
+            style="primary"  # ko'k
+        ),
+        InlineKeyboardButton(
+            text="🔄 Refresh",
+            callback_data="refresh",
+            style="primary"  # ko'k
+        ),
     ])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -207,10 +234,10 @@ def build_keyboard() -> InlineKeyboardMarkup:
 
 def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Add Account", callback_data=f"add_account_{crane_name}")],
+        [InlineKeyboardButton(text="➕ Add Account", callback_data=f"add_account_{crane_name}", style="primary")],
         [
-            InlineKeyboardButton(text="🔄 Refresh", callback_data=f"crane_{crane_name}"),
-            InlineKeyboardButton(text="◀️ Back", callback_data="back_main"),
+            InlineKeyboardButton(text="🔄 Refresh", callback_data=f"crane_{crane_name}", style="primary"),
+            InlineKeyboardButton(text="◀️ Back", callback_data="back_main", style="secondary"),
         ],
     ])
 
