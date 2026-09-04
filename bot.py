@@ -16,7 +16,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "8388720405:AAEm_jAmBBRKWX1TCehK6yev5UCI4maFzl4"
+BOT_TOKEN = "8609710969:AAGXxcahH3xRET51brLJCOdPVNl226e_co8"
 
 # ─── Kran konfiguratsiyasi ───────────────────────────────────────────────────
 CRANES = [
