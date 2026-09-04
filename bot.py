@@ -46,9 +46,14 @@ LIVE_LOG = {
     "log_text": "",
 }
 
-# ─── Global timer start vaqti ──────────────────────────────────────────────
-TIMER_START = datetime.now(timezone.utc)
-TIMER_DURATION = 60  # daqiqa
+# ─── Har bir kran uchun timer start vaqti ──────────────────────────────────
+CRANE_TIMERS = {}
+
+def get_crane_timer(crane_name: str):
+    """Kran uchun timer vaqtini oladi yoki yangi yaratadi"""
+    if crane_name not in CRANE_TIMERS:
+        CRANE_TIMERS[crane_name] = datetime.now(timezone.utc)
+    return CRANE_TIMERS[crane_name]
 
 # ─── FSM States ──────────────────────────────────────────────────────────────
 class AddAccount(StatesGroup):
@@ -90,17 +95,17 @@ def format_countdown(seconds: float) -> str:
     return f"{minutes:02d}:{secs:02d}"
 
 
-def get_global_countdown() -> str:
-    """Global timer - har doim 60 daqiqadan boshlab sanaydi"""
-    elapsed = (datetime.now(timezone.utc) - TIMER_START).total_seconds()
-    remaining = max(0, TIMER_DURATION * 60 - elapsed)
+def get_countdown(timer_start: datetime) -> str:
+    """Timer start vaqtidan boshlab 60 daqiqa sanaydi"""
+    elapsed = (datetime.now(timezone.utc) - timer_start).total_seconds()
+    remaining = max(0, 60 * 60 - elapsed)  # 60 daqiqa = 3600 sekund
     return format_countdown(remaining)
 
 
 def get_account_countdown(next_claim_at) -> str:
     """Account timer - akkaunt qo'shilgan vaqtdan boshlab sanaydi"""
     if not next_claim_at:
-        return get_global_countdown()  # Akkaunt yo'q bo'lsa global timer
+        return "--:--"
     
     remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
     if remaining <= 0:
@@ -136,21 +141,15 @@ def build_main_rich_message() -> InputRichMessage:
         cell("BALANCE", header=True, align="right"),
     ]]
 
-    # Global timer qatori
-    rows.append([
-        cell("⏱️ Global Timer"),
-        cell(get_global_countdown(), align="center"),
-        cell("", align="right"),
-    ])
-
     for crane in CRANES:
         accounts = crane.get("accounts", [])
+        crane_timer = get_crane_timer(crane['name'])
         
         if not accounts:
-            # Akkaunt yo'q - kran nomi va global timer
+            # Akkaunt yo'q - kran nomi va kran timeri
             rows.append([
                 cell(f"{crane['emoji']} {crane['name']}"),
-                cell(get_global_countdown(), align="center"),
+                cell(get_countdown(crane_timer), align="center"),
                 cell("0.000000", align="right"),
             ])
         else:
@@ -159,7 +158,7 @@ def build_main_rich_message() -> InputRichMessage:
                 email = acc.get("email", "Unknown")
                 balance = acc.get("balance", 0.0)
                 
-                # Akkaunt timeri yoki global timer
+                # Akkaunt timeri
                 countdown = get_account_countdown(acc.get("next_claim_at"))
                 
                 rows.append([
@@ -223,11 +222,10 @@ def build_trx_stats_text(crane: dict) -> str:
     lines.append(f"{'Account':<15} {'Next Claim':<12} {'Balance':<15}")
     lines.append("-" * 42)
     
-    # Crane uchun global timer
-    lines.append(f"{'⏱️ Global Timer':<15} {get_global_countdown():<12} {'':<15}")
-    
     if not accounts:
-        lines.append(f"{crane['name']:<15} {get_global_countdown():<12} {'0.000000':<15}")
+        # Akkaunt yo'q - kran timeri
+        crane_timer = get_crane_timer(crane['name'])
+        lines.append(f"{crane['name']:<15} {get_countdown(crane_timer):<12} {'0.000000':<15}")
     else:
         for acc in accounts:
             email = acc.get("email", "Unknown")[:15]
