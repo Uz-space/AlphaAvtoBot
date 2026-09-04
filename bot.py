@@ -164,6 +164,14 @@ def add_log(crane: dict, text: str):
     crane["logs"] = crane["logs"][-20:]
 
 
+async def require_text(message: Message) -> str | None:
+    """Returns stripped text, or None (and warns the user) if the message has no text."""
+    if not message.text:
+        await message.answer("⚠️ Please send plain text, not a photo/sticker/file.\n\n/cancel to abort.")
+        return None
+    return message.text.strip()
+
+
 def build_trx_stats_rich_table(crane: dict) -> InputRichBlockTable:
     accounts = crane.get("accounts", [])
 
@@ -340,7 +348,9 @@ async def cb_add_account(call: CallbackQuery, state: FSMContext):
 # ─── Add Account: Step 2 — Password ──────────────────────────────────────────
 @dp.message(AddAccount.email)
 async def fsm_email(message: Message, state: FSMContext):
-    email = message.text.strip()
+    email = await require_text(message)
+    if email is None:
+        return
     await state.update_data(email=email)
     await state.set_state(AddAccount.password)
 
@@ -358,7 +368,9 @@ async def fsm_email(message: Message, state: FSMContext):
 # ─── Add Account: Step 3 — Cookies ───────────────────────────────────────────
 @dp.message(AddAccount.password)
 async def fsm_password(message: Message, state: FSMContext):
-    password = message.text.strip()
+    password = await require_text(message)
+    if password is None:
+        return
     await state.update_data(password=password)
     await state.set_state(AddAccount.cookies)
 
@@ -395,8 +407,10 @@ async def cb_skip_cookies(call: CallbackQuery, state: FSMContext):
 # ─── Cookies kiritildi ────────────────────────────────────────────────────────
 @dp.message(AddAccount.cookies)
 async def fsm_cookies(message: Message, state: FSMContext):
-    cookies = message.text.strip()
-    chars   = len(cookies)
+    cookies = await require_text(message)
+    if cookies is None:
+        return
+    chars = len(cookies)
     await state.update_data(cookies=cookies)
     await state.set_state(AddAccount.ua)
 
@@ -423,7 +437,9 @@ async def cb_skip_ua(call: CallbackQuery, state: FSMContext):
 # ─── UA kiritildi ────────────────────────────────────────────────────────────
 @dp.message(AddAccount.ua)
 async def fsm_ua(message: Message, state: FSMContext):
-    ua = message.text.strip()
+    ua = await require_text(message)
+    if ua is None:
+        return
     await state.update_data(ua=ua)
     await _finish_add_account(message, state, via_callback=False)
 
