@@ -101,51 +101,55 @@ async def require_text(message: Message) -> str | None:
     return message.text.strip()
 
 
-# ─── RICH MESSAGE - Asosiy dashboard (faqat rich table) ─────────────────────
+# ─── RICH TABLE - Asosiy dashboard (faqat 3 ta ustun) ──────────────────────
 def build_main_rich_message() -> InputRichMessage:
-    """Asosiy dashboard - faqat TRX statistikasi jadvali"""
+    """Asosiy dashboard - faqat 3 ta ustun: ACCOUNT, BALANCE, NEXT CLAIM IN"""
     
     def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
 
-    # Table headers
+    # Table headers - faqat 3 ta ustun
     rows = [[
-        cell("CRANE", header=True),
-        cell("STATUS", header=True, align="center"),
-        cell("ACTIVE", header=True, align="center"),
+        cell("ACCOUNT", header=True),
         cell("BALANCE (TRX)", header=True, align="right"),
-        cell("NEXT CLAIM", header=True, align="center"),
+        cell("NEXT CLAIM IN", header=True, align="center"),
     ]]
 
+    # Har bir kran uchun ma'lumotlar
     for crane in CRANES:
         accounts = crane.get("accounts", [])
-        active_count = sum(1 for a in accounts if a.get("active", False))
-        total_balance = sum(acc.get("balance", 0.0) for acc in accounts)
         
-        # Status
-        status = "🟢 Active" if crane["active"] else "⚠️ Inactive"
-        
-        # Next claim time
-        next_claim = "--:--"
-        for acc in accounts:
-            if acc.get("active") and acc.get("next_claim_at"):
-                remaining = (acc["next_claim_at"] - datetime.now(timezone.utc)).total_seconds()
-                if remaining > 0:
-                    next_claim = format_countdown(remaining)
-                    break
+        if not accounts:
+            # Akkaunt yo'q bo'lsa
+            rows.append([
+                cell(f"{crane['emoji']} {crane['name']}"),
+                cell("0.000000", align="right"),
+                cell("--:--", align="center"),
+            ])
+        else:
+            # Har bir akkaunt uchun alohida qator
+            for acc in accounts:
+                email = acc.get("email", "Unknown")
+                balance = acc.get("balance", 0.0)
+                
+                # Next claim vaqtini hisoblash
+                next_claim_at = acc.get("next_claim_at")
+                if next_claim_at:
+                    remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
+                    if remaining > 0:
+                        countdown = format_countdown(remaining)
+                    else:
+                        countdown = "🔓 Ready"
                 else:
-                    next_claim = "🔓 Ready"
-                    break
-        
-        rows.append([
-            cell(f"{crane['emoji']} {crane['name']}"),
-            cell(status, align="center"),
-            cell(str(active_count), align="center"),
-            cell(f"{total_balance:.6f}", align="right"),
-            cell(next_claim, align="center"),
-        ])
+                    countdown = "--:--"
+                
+                rows.append([
+                    cell(f"{crane['emoji']} {email}"),
+                    cell(f"{balance:.6f}", align="right"),
+                    cell(countdown, align="center"),
+                ])
 
-    # Create rich message with only the table
+    # Rich table yaratish
     table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
     
     return InputRichMessage(blocks=[
@@ -200,12 +204,11 @@ def build_trx_stats_text(crane: dict) -> str:
         return "No accounts yet."
     
     lines = []
-    lines.append(f"{'Account':<15} {'Status':<8} {'Balance (TRX)':<15} {'Next Claim':<12}")
-    lines.append("─" * 50)
+    lines.append(f"{'Account':<15} {'Balance (TRX)':<15} {'Next Claim':<12}")
+    lines.append("─" * 42)
     
     for acc in accounts:
         email = acc.get("email", "")[:15]
-        status = "🟢" if acc.get("active") else "🔴"
         balance = acc.get("balance", 0.0)
         
         next_claim_at = acc.get("next_claim_at")
@@ -218,7 +221,7 @@ def build_trx_stats_text(crane: dict) -> str:
         else:
             countdown = "--:--"
             
-        lines.append(f"{email:<15} {status:<8} {balance:<15.6f} {countdown:<12}")
+        lines.append(f"{email:<15} {balance:<15.6f} {countdown:<12}")
     
     return "\n".join(lines)
 
