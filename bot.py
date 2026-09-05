@@ -21,9 +21,9 @@ BOT_TOKEN = "8609710969:AAGXxcahH3xRET51brLJCOdPVNl226e_co8"
 
 # ─── Kran konfiguratsiyasi ───────────────────────────────────────────────────
 CRANES = [
-    {"name": "TronPick", "emoji": "🔴", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "LitePick", "emoji": "🌕", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "DogePick", "emoji": "🐕", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
+    {"name": "TronPick", "emoji": "", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
+    {"name": "LitePick", "emoji": "", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
+    {"name": "DogePick", "emoji": "", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
 ]
 
 API_STATE = {
@@ -264,7 +264,7 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         if not accounts:
             # Akkaunt yo'q - kran nomi va kran timeri
             rows.append([
-                cell(f"{crane['emoji']} {crane['name']}"),
+                cell(f"{crane['emoji']} {crane['name']}".strip()),
                 cell(get_countdown(crane_timer), align="center"),
                 cell("0.000000", align="right"),
             ])
@@ -278,7 +278,7 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
                 countdown = get_account_countdown(acc.get("next_claim_at"))
 
                 rows.append([
-                    cell(f"{crane['emoji']} {email}"),
+                    cell(f"{crane['emoji']} {email}".strip()),
                     cell(countdown, align="center"),
                     cell(f"{balance:.6f}", align="right"),
                 ])
@@ -421,7 +421,7 @@ def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
     active_count = sum(1 for a in accounts if a.get("active", False))
 
     blocks = [
-        InputRichBlockParagraph(text=[RichTextBold(text=t(chat_id, "crane_control_panel", emoji=crane['emoji'], name=crane['name']))]),
+        InputRichBlockParagraph(text=[RichTextBold(text=t(chat_id, "crane_control_panel", emoji=crane['emoji'], name=crane['name']).strip())]),
         InputRichBlockParagraph(text=t(chat_id, "crane_claims_balance", claims=crane['claims'], balance=crane['balance'])),
         InputRichBlockSectionHeading(text=t(chat_id, "crane_active_accounts", active=active_count, total=acc_count), size=4),
     ]
@@ -587,7 +587,7 @@ async def cb_add_account(call: CallbackQuery, state: FSMContext):
     await call.message.delete()
     await call.message.answer(
         text=(
-            f"{t(chat_id, 'add_account_title', emoji=crane['emoji'], crane=crane_name)}\n\n"
+            f"{t(chat_id, 'add_account_title', emoji=crane['emoji'], crane=crane_name).strip()}\n\n"
             f"{t(chat_id, 'field_label', label=label)}\n\n"
             f"{t(chat_id, 'add_account_send_email')}\n\n"
             f"{t(chat_id, 'cancel_hint')}"
@@ -658,9 +658,10 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
     add_log(crane, f"Account linked: {email}")
 
     chat_id = message.chat.id
+    crane_line = f"{crane['emoji']} {crane_name} #{len(crane['accounts'])}".strip()
     summary = (
         f"{t(chat_id, 'account_added')}\n\n"
-        f"{crane['emoji']} {crane_name} #{len(crane['accounts'])}\n"
+        f"{crane_line}\n"
         f"{t(chat_id, 'field_label', label=label)}\n"
         f"{t(chat_id, 'email_line', email=email)}\n"
         f"{t(chat_id, 'password_line')}\n\n"
