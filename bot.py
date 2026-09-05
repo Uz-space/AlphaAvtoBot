@@ -317,6 +317,14 @@ def build_keyboard(chat_id: int) -> InlineKeyboardMarkup:
 
     buttons.append([
         InlineKeyboardButton(
+            text=t(chat_id, "btn_support"),
+            url="https://t.me/alphadevlab",
+            style=ButtonStyle.DANGER,
+        ),
+    ])
+
+    buttons.append([
+        InlineKeyboardButton(
             text=t(chat_id, "btn_settings"),
             callback_data="settings",
             style=ButtonStyle.SUCCESS,
