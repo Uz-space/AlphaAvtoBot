@@ -64,6 +64,24 @@ class AddAccount(StatesGroup):
     ua       = State()
 
 
+class SettingsFSM(StatesGroup):
+    api_key = State()
+
+
+# ─── Settings ma'lumotlari (foydalanuvchi bo'yicha) ─────────────────────────
+USER_SETTINGS = {}  # chat_id -> {"api_key": str|None, "language": "uz"|"ru"|"en"}
+
+LANGUAGES = {
+    "uz": "🇺🇿 O'zbek",
+    "ru": "🇷🇺 Русский",
+    "en": "🇬🇧 English",
+}
+
+
+def get_user_settings(chat_id: int) -> dict:
+    return USER_SETTINGS.setdefault(chat_id, {"api_key": None, "language": "uz"})
+
+
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 def get_crane(name: str):
     return next((c for c in CRANES if c["name"] == name), None)
@@ -201,14 +219,6 @@ def build_keyboard() -> InlineKeyboardMarkup:
 
     buttons.append([
         InlineKeyboardButton(
-            text="🆘 Support",
-            url="https://t.me/alphadevlab",
-            style=ButtonStyle.DANGER,
-        ),
-    ])
-
-    buttons.append([
-        InlineKeyboardButton(
             text="⚙️ Settings",
             callback_data="settings",
             style=ButtonStyle.SUCCESS,
@@ -221,6 +231,42 @@ def build_keyboard() -> InlineKeyboardMarkup:
     ])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def build_settings_text(chat_id: int) -> str:
+    s = get_user_settings(chat_id)
+    api_status = "✅ Set" if s.get("api_key") else "❌ Not set"
+    lang_name = LANGUAGES.get(s.get("language", "uz"), s.get("language"))
+    return (
+        f"⚙️ Settings\n\n"
+        f"🔑 API Key: {api_status}\n"
+        f"🌐 Language: {lang_name}"
+    )
+
+
+def build_settings_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔑 API Key", callback_data="settings_api_key")],
+        [InlineKeyboardButton(text="🌐 Language", callback_data="settings_language")],
+        [InlineKeyboardButton(
+            text="🆘 Support",
+            url="https://t.me/alphadevlab",
+            style=ButtonStyle.DANGER,
+        )],
+        [InlineKeyboardButton(text="◀️ Back", callback_data="back_main")],
+    ])
+
+
+def build_language_keyboard() -> InlineKeyboardMarkup:
+    buttons = [[InlineKeyboardButton(text=name, callback_data=f"lang_{code}")] for code, name in LANGUAGES.items()]
+    buttons.append([InlineKeyboardButton(text="◀️ Back", callback_data="settings")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def settings_cancel_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_settings")]
+    ])
 
 
 def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
@@ -346,11 +392,17 @@ async def cmd_start(message: Message, state: FSMContext):
 # ─── /cancel ─────────────────────────────────────────────────────────────────
 @dp.message(Command("cancel"))
 async def cmd_cancel(message: Message, state: FSMContext):
+    current_state = await state.get_state()
     data = await state.get_data()
     crane_name = data.get("crane_name", "")
     await state.clear()
     await message.answer("❌ Cancelled.")
-    if crane_name:
+    if current_state and current_state.startswith("SettingsFSM"):
+        await message.answer(
+            text=build_settings_text(message.chat.id),
+            reply_markup=build_settings_keyboard(),
+        )
+    elif crane_name:
         crane = get_crane(crane_name)
         if crane:
             await message.answer_rich(
@@ -616,10 +668,87 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
     await call.answer("❌ Cancelled.")
 
 
-# ─── Settings ────────────────────────────────────────────────────────────────
+# ─── Settings: asosiy menyu ──────────────────────────────────────────────────
 @dp.callback_query(F.data == "settings")
-async def cb_settings(call: CallbackQuery):
-    await call.answer("⚙️ Settings (coming soon...)", show_alert=False)
+async def cb_settings(call: CallbackQuery, state: FSMContext):
+    await state.clear()
+    try:
+        await call.message.delete()
+    except:
+        pass
+    if call.message.chat.id in main_messages:
+        del main_messages[call.message.chat.id]
+    await call.message.answer(
+        text=build_settings_text(call.message.chat.id),
+        reply_markup=build_settings_keyboard(),
+    )
+    await call.answer()
+
+
+# ─── Settings: API Key so'rash ───────────────────────────────────────────────
+@dp.callback_query(F.data == "settings_api_key")
+async def cb_settings_api_key(call: CallbackQuery, state: FSMContext):
+    await state.set_state(SettingsFSM.api_key)
+    await call.message.delete()
+    await call.message.answer(
+        text=(
+            "🔑 Send your API Key:\n\n"
+            "/cancel to abort."
+        ),
+        reply_markup=settings_cancel_keyboard(),
+    )
+    await call.answer()
+
+
+@dp.message(SettingsFSM.api_key)
+async def fsm_api_key(message: Message, state: FSMContext):
+    api_key = await require_text(message)
+    if api_key is None:
+        return
+    settings = get_user_settings(message.chat.id)
+    settings["api_key"] = api_key
+    await state.clear()
+    await message.answer(
+        text=f"✅ API Key saved!\n\n{build_settings_text(message.chat.id)}",
+        reply_markup=build_settings_keyboard(),
+    )
+
+
+# ─── Settings: Language tanlash ──────────────────────────────────────────────
+@dp.callback_query(F.data == "settings_language")
+async def cb_settings_language(call: CallbackQuery):
+    await call.message.edit_text(
+        text="🌐 Tilni tanlang:",
+        reply_markup=build_language_keyboard(),
+    )
+    await call.answer()
+
+
+@dp.callback_query(F.data.startswith("lang_"))
+async def cb_lang_select(call: CallbackQuery):
+    code = call.data.replace("lang_", "")
+    if code not in LANGUAGES:
+        await call.answer("Not found!", show_alert=True)
+        return
+    settings = get_user_settings(call.message.chat.id)
+    settings["language"] = code
+    await call.message.edit_text(
+        text=build_settings_text(call.message.chat.id),
+        reply_markup=build_settings_keyboard(),
+    )
+    await call.answer(f"✅ {LANGUAGES[code]}")
+
+
+# ─── Settings: API Key kiritishni bekor qilish ──────────────────────────────
+@dp.callback_query(F.data == "cancel_settings")
+async def cb_cancel_settings(call: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await call.message.delete()
+    await call.message.answer(
+        text=build_settings_text(call.message.chat.id),
+        reply_markup=build_settings_keyboard(),
+    )
+    await call.answer("❌ Cancelled.")
 
 
 # ─── Startup ─────────────────────────────────────────────────────────────────
