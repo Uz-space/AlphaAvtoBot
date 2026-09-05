@@ -323,8 +323,11 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
 
     table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
 
+    title_cell = [[RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "dashboard_title"), is_header=False)]]
+    title_table = InputRichBlockTable(cells=title_cell, is_bordered=False, is_striped=False)
+
     return InputRichMessage(blocks=[
-        InputRichBlockParagraph(text=[RichTextBold(text=t(chat_id, "dashboard_title"))]),
+        title_table,
         table,
         InputRichBlockParagraph(text=t(chat_id, "dashboard_footer"))
     ])
