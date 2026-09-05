@@ -71,21 +71,21 @@ def get_crane(name: str):
 
 def cancel_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add", style=ButtonStyle.DANGER)]
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")]
     ])
 
 
 def skip_cookies_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add", style=ButtonStyle.DANGER)],
-        [InlineKeyboardButton(text="⏭️ Skip Cookies", callback_data="skip_cookies", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")],
+        [InlineKeyboardButton(text="⏭️ Skip Cookies", callback_data="skip_cookies")],
     ])
 
 
 def skip_ua_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add", style=ButtonStyle.DANGER)],
-        [InlineKeyboardButton(text="⏭️ Skip UA", callback_data="skip_ua", style=ButtonStyle.PRIMARY)],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")],
+        [InlineKeyboardButton(text="⏭️ Skip UA", callback_data="skip_ua")],
     ])
 
 
@@ -178,8 +178,8 @@ def build_main_rich_message() -> InputRichMessage:
 
 
 def build_keyboard() -> InlineKeyboardMarkup:
-    """Asosiy menyu klaviaturasi.
-    - Barcha pick tugmalari: qizil (danger)
+    """Asosiy menyu (dashboard) klaviaturasi.
+    - Barcha pick tugmalari (TronPick, DogePick, ...): ko'k (primary)
     - Support: qizil (danger)
     - Settings va Refresh: yashil (success)
     """
@@ -190,7 +190,7 @@ def build_keyboard() -> InlineKeyboardMarkup:
         btn = InlineKeyboardButton(
             text=f"{c['name']}",
             callback_data=f"crane_{c['name']}",
-            style=ButtonStyle.DANGER,
+            style=ButtonStyle.PRIMARY,
         )
         row.append(btn)
         if len(row) == 2:
