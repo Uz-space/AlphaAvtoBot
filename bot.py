@@ -368,12 +368,16 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Ma'lumotlar - alohida jadval, yonma-yon
+    # Ma'lumotlar - alohida jadval: yorliq tepada, qiymat pastda
     info_table = InputRichBlockTable(
         cells=[
             [
-                cell(t(chat_id, "settings_api_key_line", status=api_status), align="center"),
-                cell(t(chat_id, "settings_language_line", lang=lang_name), align="center"),
+                cell(t(chat_id, "btn_api_key"), header=True, align="center"),
+                cell(t(chat_id, "btn_language"), header=True, align="center"),
+            ],
+            [
+                cell(api_status, align="center"),
+                cell(lang_name, align="center"),
             ],
         ],
         is_bordered=True,
