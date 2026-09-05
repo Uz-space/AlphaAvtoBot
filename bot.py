@@ -77,7 +77,7 @@ def get_user_settings(chat_id: int) -> dict:
 # ─── TARJIMALAR ──────────────────────────────────────────────────────────────
 TEXTS = {
     "uz_latin": {
-        "dashboard_title": "📊 TRX Stats Dashboard",
+        "dashboard_title": "ALPHA",
         "dashboard_footer": "💡 Akkauntlarni boshqarish uchun pastdagi kran tugmasini bosing",
         "col_account": "AKKAUNT",
         "col_next_claim": "KEYINGI OLISH",
@@ -142,7 +142,7 @@ TEXTS = {
         "choose_language": "🌐 Tilni tanlang:",
     },
     "uz_cyrillic": {
-        "dashboard_title": "📊 TRX Stats Дашборди",
+        "dashboard_title": "ALPHA",
         "dashboard_footer": "💡 Аккаунтларни бошқариш учун пастдаги кран тугмасини босинг",
         "col_account": "АККАУНТ",
         "col_next_claim": "КЕЙИНГИ ОЛИШ",
