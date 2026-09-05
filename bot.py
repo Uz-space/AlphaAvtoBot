@@ -24,13 +24,6 @@ CRANES = [
     {"name": "TronPick", "emoji": "🔴", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
     {"name": "LitePick", "emoji": "🌕", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
     {"name": "DogePick", "emoji": "🐕", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "PolPick",  "emoji": "🪙", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "BnbPick",  "emoji": "🟡", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "SolPick",  "emoji": "☀️", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "SuiPick",  "emoji": "💧", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "UsdPick",  "emoji": "💵", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "TonPick",  "emoji": "💎", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
-    {"name": "BchPick",  "emoji": "🟤", "active": False, "multiplier": None, "claims": 0, "max_claims": "∞", "balance": 0, "accounts": [], "logs": []},
 ]
 
 API_STATE = {
