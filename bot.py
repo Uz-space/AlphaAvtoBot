@@ -747,7 +747,7 @@ async def fsm_api_key(message: Message, state: FSMContext):
     await state.clear()
     chat_id = message.chat.id
     await message.answer(
-        text=f"{t(chat_id, 'api_key_saved')}\n\n{build_settings_text(chat_id)}",
+        text=build_settings_text(chat_id),
         reply_markup=build_settings_keyboard(chat_id),
     )
 
