@@ -392,13 +392,13 @@ def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
             url="https://t.me/alphadevlab",
             style=ButtonStyle.DANGER,
         )],
-        [InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main", style=ButtonStyle.SUCCESS)],
     ])
 
 
 def build_language_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton(text=name, callback_data=f"lang_{code}")] for code, name in LANGUAGES.items()]
-    buttons.append([InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="settings")])
+    buttons.append([InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="settings", style=ButtonStyle.SUCCESS)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -413,7 +413,7 @@ def build_crane_keyboard(chat_id: int, crane_name: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t(chat_id, "btn_add_account"), callback_data=f"add_account_{crane_name}")],
         [
             InlineKeyboardButton(text=t(chat_id, "btn_refresh"), callback_data=f"crane_{crane_name}"),
-            InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main"),
+            InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main", style=ButtonStyle.SUCCESS),
         ],
     ])
 
@@ -785,7 +785,7 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(chat_id, "btn_back_to_crane", crane=crane_name), callback_data=f"crane_{crane_name}")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_back_to_crane", crane=crane_name), callback_data=f"crane_{crane_name}", style=ButtonStyle.SUCCESS)],
         [InlineKeyboardButton(text=t(chat_id, "btn_main_menu"), callback_data="back_main")],
     ])
 
