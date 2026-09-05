@@ -76,7 +76,7 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
-        "motivation_text": "🚀 Har bir qadam - katta yutuqqa boshlaydi!",
+        "motivation_text": "🚀 Har bir qadam katta yutuqqa boshlaydi — sabr va izchillik bilan davom eting, natija albatta keladi!",
         "col_account": "AKKAUNT",
         "col_next_claim": "KEYINGI OLISH",
         "col_balance": "BALANS",
@@ -131,7 +131,7 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
-        "motivation_text": "🚀 Ҳар бир қадам - катта ютуққа бошлайди!",
+        "motivation_text": "🚀 Ҳар бир қадам катта ютуққа бошлайди — сабр ва изчиллик билан давом этинг, натижа албатта келади!",
         "col_account": "АККАУНТ",
         "col_next_claim": "КЕЙИНГИ ОЛИШ",
         "col_balance": "БАЛАНС",
