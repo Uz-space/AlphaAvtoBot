@@ -76,7 +76,6 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
-        "dashboard_footer": "💡 Akkauntlarni boshqarish uchun pastdagi kran tugmasini bosing",
         "col_account": "AKKAUNT",
         "col_next_claim": "KEYINGI OLISH",
         "col_balance": "BALANS",
@@ -131,7 +130,6 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
-        "dashboard_footer": "💡 Аккаунтларни бошқариш учун пастдаги кран тугмасини босинг",
         "col_account": "АККАУНТ",
         "col_next_claim": "КЕЙИНГИ ОЛИШ",
         "col_balance": "БАЛАНС",
@@ -293,7 +291,6 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
     return InputRichMessage(blocks=[
         title_table,
         table,
-        InputRichBlockParagraph(text=t(chat_id, "dashboard_footer"))
     ])
 
 
