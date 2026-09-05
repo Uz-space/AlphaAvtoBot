@@ -53,8 +53,6 @@ def get_crane_timer(crane_name: str):
 class AddAccount(StatesGroup):
     email    = State()
     password = State()
-    cookies  = State()
-    ua       = State()
 
 
 class SettingsFSM(StatesGroup):
@@ -88,8 +86,6 @@ TEXTS = {
         "btn_add_account": "➕ Akkaunt qo'shish",
         "btn_back": "◀️ Orqaga",
         "btn_cancel": "❌ Bekor qilish",
-        "btn_skip_cookies": "⏭️ Cookie'ni o'tkazib yuborish",
-        "btn_skip_ua": "⏭️ UA'ni o'tkazib yuborish",
         "btn_api_key": "🔑 API Kalit",
         "btn_language": "🌐 Til",
         "btn_support": "🆘 Yordam",
@@ -119,17 +115,9 @@ TEXTS = {
         "email_line": "Email: {email}",
         "send_password": "Endi parolni yuboring:",
         "password_line": "Parol: ✅",
-        "cookies_prompt": "Cookie (ixtiyoriy - yuboring yoki O'tkazib yuborish tugmasini bosing):",
-        "cookies_hint": "F12 > Konsol > document.cookie",
-        "cookies_skipped": "Cookie: O'tkazib yuborildi",
-        "cookies_saved": "Cookie: ✅ ({chars} ta belgi)",
-        "ua_prompt": "User-Agent (ixtiyoriy - yuboring yoki O'tkazib yuborish tugmasini bosing):",
-        "ua_hint": "F12 > Konsol > navigator.userAgent",
         "cancel_hint": "/cancel — bekor qilish uchun.",
 
         "account_added": "Akkaunt qo'shildi!",
-        "field_cookies": "Cookie: {icon}",
-        "field_ua": "UA: {icon}",
         "next_claim_in": "⏱️ Keyingi olish: 60:00",
 
         "settings_title": "⚙️ Sozlamalar",
@@ -153,8 +141,6 @@ TEXTS = {
         "btn_add_account": "➕ Аккаунт қўшиш",
         "btn_back": "◀️ Орқага",
         "btn_cancel": "❌ Бекор қилиш",
-        "btn_skip_cookies": "⏭️ Cookie'ни ўтказиб юбориш",
-        "btn_skip_ua": "⏭️ UA'ни ўтказиб юбориш",
         "btn_api_key": "🔑 API Калит",
         "btn_language": "🌐 Тил",
         "btn_support": "🆘 Ёрдам",
@@ -184,17 +170,9 @@ TEXTS = {
         "email_line": "Email: {email}",
         "send_password": "Энди паролни юборинг:",
         "password_line": "Парол: ✅",
-        "cookies_prompt": "Cookie (ихтиёрий - юборинг ёки Ўтказиб юбориш тугмасини босинг):",
-        "cookies_hint": "F12 > Консол > document.cookie",
-        "cookies_skipped": "Cookie: Ўтказиб юборилди",
-        "cookies_saved": "Cookie: ✅ ({chars} та белги)",
-        "ua_prompt": "User-Agent (ихтиёрий - юборинг ёки Ўтказиб юбориш тугмасини босинг):",
-        "ua_hint": "F12 > Консол > navigator.userAgent",
         "cancel_hint": "/cancel — бекор қилиш учун.",
 
         "account_added": "Аккаунт қўшилди!",
-        "field_cookies": "Cookie: {icon}",
-        "field_ua": "UA: {icon}",
         "next_claim_in": "⏱️ Кейинги олиш: 60:00",
 
         "settings_title": "⚙️ Созламалар",
@@ -225,20 +203,6 @@ def get_crane(name: str):
 def cancel_keyboard(chat_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")]
-    ])
-
-
-def skip_cookies_keyboard(chat_id: int):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")],
-        [InlineKeyboardButton(text=t(chat_id, "btn_skip_cookies"), callback_data="skip_cookies")],
-    ])
-
-
-def skip_ua_keyboard(chat_id: int):
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")],
-        [InlineKeyboardButton(text=t(chat_id, "btn_skip_ua"), callback_data="skip_ua")],
     ])
 
 
@@ -656,82 +620,13 @@ async def fsm_email(message: Message, state: FSMContext):
     )
 
 
-# ─── Add Account: Step 3 — Cookies ───────────────────────────────────────────
+# ─── Add Account: Step 2 tugagach — yakunlash ────────────────────────────────
 @dp.message(AddAccount.password)
 async def fsm_password(message: Message, state: FSMContext):
     password = await require_text(message)
     if password is None:
         return
     await state.update_data(password=password)
-    await state.set_state(AddAccount.cookies)
-
-    chat_id = message.chat.id
-    await message.answer(
-        text=(
-            f"{t(chat_id, 'password_line')}\n\n"
-            f"{t(chat_id, 'cookies_prompt')}\n\n"
-            f"{t(chat_id, 'cookies_hint')}\n\n"
-            f"{t(chat_id, 'cancel_hint')}"
-        ),
-        reply_markup=skip_cookies_keyboard(chat_id),
-    )
-
-
-# ─── Skip Cookies ────────────────────────────────────────────────────────────
-@dp.callback_query(F.data == "skip_cookies")
-async def cb_skip_cookies(call: CallbackQuery, state: FSMContext):
-    await state.update_data(cookies=None)
-    await state.set_state(AddAccount.ua)
-    chat_id = call.message.chat.id
-    await call.message.edit_text(
-        text=(
-            f"{t(chat_id, 'cookies_skipped')}\n\n"
-            f"{t(chat_id, 'ua_prompt')}\n\n"
-            f"{t(chat_id, 'ua_hint')}\n\n"
-            f"{t(chat_id, 'cancel_hint')}"
-        ),
-        reply_markup=skip_ua_keyboard(chat_id),
-    )
-    await call.answer()
-
-
-# ─── Cookies kiritildi ────────────────────────────────────────────────────────
-@dp.message(AddAccount.cookies)
-async def fsm_cookies(message: Message, state: FSMContext):
-    cookies = await require_text(message)
-    if cookies is None:
-        return
-    chars = len(cookies)
-    await state.update_data(cookies=cookies)
-    await state.set_state(AddAccount.ua)
-
-    chat_id = message.chat.id
-    await message.answer(
-        text=(
-            f"{t(chat_id, 'cookies_saved', chars=chars)}\n\n"
-            f"{t(chat_id, 'ua_prompt')}\n\n"
-            f"{t(chat_id, 'ua_hint')}\n\n"
-            f"{t(chat_id, 'cancel_hint')}"
-        ),
-        reply_markup=skip_ua_keyboard(chat_id),
-    )
-
-
-# ─── Skip UA ─────────────────────────────────────────────────────────────────
-@dp.callback_query(F.data == "skip_ua")
-async def cb_skip_ua(call: CallbackQuery, state: FSMContext):
-    await state.update_data(ua=None)
-    await _finish_add_account(call.message, state, via_callback=True)
-    await call.answer()
-
-
-# ─── UA kiritildi ────────────────────────────────────────────────────────────
-@dp.message(AddAccount.ua)
-async def fsm_ua(message: Message, state: FSMContext):
-    ua = await require_text(message)
-    if ua is None:
-        return
-    await state.update_data(ua=ua)
     await _finish_add_account(message, state, via_callback=False)
 
 
@@ -742,8 +637,6 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
     label = data["label"]
     email = data["email"]
     password = data["password"]
-    cookies = data.get("cookies")
-    ua = data.get("ua")
 
     crane = get_crane(crane_name)
     if crane is None:
@@ -757,8 +650,6 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
         "label": label,
         "email": email,
         "password": password,
-        "cookies": cookies,
-        "ua": ua,
         "active": True,
         "balance": 0.0,
         "next_claim_at": next_claim_time,
@@ -769,18 +660,13 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
     add_log(crane, f"Connecting to {crane_name} Server...")
     add_log(crane, f"Account linked: {email}")
 
-    cookies_icon = "✅" if cookies else "⏭️"
-    ua_icon = "✅" if ua else "⏭️"
-
     chat_id = message.chat.id
     summary = (
         f"{t(chat_id, 'account_added')}\n\n"
         f"{crane['emoji']} {crane_name} #{len(crane['accounts'])}\n"
         f"{t(chat_id, 'field_label', label=label)}\n"
         f"{t(chat_id, 'email_line', email=email)}\n"
-        f"{t(chat_id, 'password_line')}\n"
-        f"{t(chat_id, 'field_cookies', icon=cookies_icon)}\n"
-        f"{t(chat_id, 'field_ua', icon=ua_icon)}\n\n"
+        f"{t(chat_id, 'password_line')}\n\n"
         f"{t(chat_id, 'next_claim_in')}"
     )
 
