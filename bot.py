@@ -368,11 +368,13 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Ma'lumotlar - alohida jadval
+    # Ma'lumotlar - alohida jadval, yonma-yon
     info_table = InputRichBlockTable(
         cells=[
-            [cell(t(chat_id, "settings_api_key_line", status=api_status))],
-            [cell(t(chat_id, "settings_language_line", lang=lang_name))],
+            [
+                cell(t(chat_id, "settings_api_key_line", status=api_status), align="center"),
+                cell(t(chat_id, "settings_language_line", lang=lang_name), align="center"),
+            ],
         ],
         is_bordered=True,
         is_striped=True,
