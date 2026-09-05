@@ -359,7 +359,6 @@ def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
 
 def build_language_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton(text=name, callback_data=f"lang_{code}")] for code, name in LANGUAGES.items()]
-    buttons.append([InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="settings", style=ButtonStyle.SUCCESS)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
