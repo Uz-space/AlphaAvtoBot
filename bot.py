@@ -69,17 +69,159 @@ class SettingsFSM(StatesGroup):
 
 
 # ─── Settings ma'lumotlari (foydalanuvchi bo'yicha) ─────────────────────────
-USER_SETTINGS = {}  # chat_id -> {"api_key": str|None, "language": "uz"|"ru"|"en"}
+USER_SETTINGS = {}  # chat_id -> {"api_key": str|None, "language": "uz_latin"|"uz_cyrillic"}
 
 LANGUAGES = {
-    "uz": "🇺🇿 O'zbek",
-    "ru": "🇷🇺 Русский",
-    "en": "🇬🇧 English",
+    "uz_latin": "🇺🇿 O'zbekcha (lotin)",
+    "uz_cyrillic": "🇺🇿 Ўзбекча (кирилл)",
 }
 
 
 def get_user_settings(chat_id: int) -> dict:
-    return USER_SETTINGS.setdefault(chat_id, {"api_key": None, "language": "uz"})
+    return USER_SETTINGS.setdefault(chat_id, {"api_key": None, "language": "uz_latin"})
+
+
+# ─── TARJIMALAR ──────────────────────────────────────────────────────────────
+TEXTS = {
+    "uz_latin": {
+        "dashboard_title": "📊 TRX Stats Dashboard",
+        "dashboard_footer": "💡 Akkauntlarni boshqarish uchun pastdagi kran tugmasini bosing",
+        "col_account": "AKKAUNT",
+        "col_next_claim": "KEYINGI OLISH",
+        "col_balance": "BALANS",
+
+        "btn_settings": "⚙️ Sozlamalar",
+        "btn_refresh": "🔄 Yangilash",
+        "btn_add_account": "➕ Akkaunt qo'shish",
+        "btn_back": "◀️ Orqaga",
+        "btn_cancel": "❌ Bekor qilish",
+        "btn_skip_cookies": "⏭️ Cookie'ni o'tkazib yuborish",
+        "btn_skip_ua": "⏭️ UA'ni o'tkazib yuborish",
+        "btn_api_key": "🔑 API Kalit",
+        "btn_language": "🌐 Til",
+        "btn_support": "🆘 Yordam",
+        "btn_main_menu": "🏠 Bosh menyu",
+        "btn_back_to_crane": "◀️ {crane}ga qaytish",
+
+        "not_found": "Topilmadi!",
+        "updated": "♻️ Yangilandi!",
+        "cancelled": "❌ Bekor qilindi.",
+        "plain_text_warning": "⚠️ Iltimos, oddiy matn yuboring, rasm/stiker/fayl emas.\n\n/cancel — bekor qilish uchun.",
+
+        "crane_control_panel": "{emoji} {name} - Boshqaruv paneli",
+        "crane_claims_balance": "📊 {claims} ta olish | 💰 {balance}",
+        "crane_active_accounts": "Faol akkauntlar ({active}/{total})",
+        "crane_no_accounts": "Faol akkaunt yo'q - qo'shish uchun + bosing",
+        "crane_trx_stats_heading": "📊 TRX Statistikasi",
+        "crane_live_logs_heading": "📡 Jonli loglar",
+        "crane_no_claims_yet": "⏳ Hali olishlar yo'q...",
+
+        "stats_col_account": "Akkaunt",
+        "stats_col_next_claim": "Keyingi olish",
+        "stats_col_balance": "Balans",
+
+        "add_account_title": "{emoji} Akkaunt qo'shish - {crane}",
+        "field_label": "Belgi: {label}",
+        "add_account_send_email": "Akkaunt emailini yuboring:",
+        "email_line": "Email: {email}",
+        "send_password": "Endi parolni yuboring:",
+        "password_line": "Parol: ✅",
+        "cookies_prompt": "Cookie (ixtiyoriy - yuboring yoki O'tkazib yuborish tugmasini bosing):",
+        "cookies_hint": "F12 > Konsol > document.cookie",
+        "cookies_skipped": "Cookie: O'tkazib yuborildi",
+        "cookies_saved": "Cookie: ✅ ({chars} ta belgi)",
+        "ua_prompt": "User-Agent (ixtiyoriy - yuboring yoki O'tkazib yuborish tugmasini bosing):",
+        "ua_hint": "F12 > Konsol > navigator.userAgent",
+        "cancel_hint": "/cancel — bekor qilish uchun.",
+
+        "account_added": "Akkaunt qo'shildi!",
+        "field_cookies": "Cookie: {icon}",
+        "field_ua": "UA: {icon}",
+        "next_claim_in": "⏱️ Keyingi olish: 60:00",
+
+        "settings_title": "⚙️ Sozlamalar",
+        "settings_api_key_line": "🔑 API Kalit: {status}",
+        "settings_language_line": "🌐 Til: {lang}",
+        "api_key_set": "✅ O'rnatilgan",
+        "api_key_not_set": "❌ O'rnatilmagan",
+        "send_api_key": "🔑 API kalitingizni yuboring:",
+        "api_key_saved": "✅ API Kalit saqlandi!",
+        "choose_language": "🌐 Tilni tanlang:",
+    },
+    "uz_cyrillic": {
+        "dashboard_title": "📊 TRX Stats Дашборди",
+        "dashboard_footer": "💡 Аккаунтларни бошқариш учун пастдаги кран тугмасини босинг",
+        "col_account": "АККАУНТ",
+        "col_next_claim": "КЕЙИНГИ ОЛИШ",
+        "col_balance": "БАЛАНС",
+
+        "btn_settings": "⚙️ Созламалар",
+        "btn_refresh": "🔄 Янгилаш",
+        "btn_add_account": "➕ Аккаунт қўшиш",
+        "btn_back": "◀️ Орқага",
+        "btn_cancel": "❌ Бекор қилиш",
+        "btn_skip_cookies": "⏭️ Cookie'ни ўтказиб юбориш",
+        "btn_skip_ua": "⏭️ UA'ни ўтказиб юбориш",
+        "btn_api_key": "🔑 API Калит",
+        "btn_language": "🌐 Тил",
+        "btn_support": "🆘 Ёрдам",
+        "btn_main_menu": "🏠 Бош меню",
+        "btn_back_to_crane": "◀️ {crane}га қайтиш",
+
+        "not_found": "Топилмади!",
+        "updated": "♻️ Янгиланди!",
+        "cancelled": "❌ Бекор қилинди.",
+        "plain_text_warning": "⚠️ Илтимос, оддий матн юборинг, расм/стикер/файл эмас.\n\n/cancel — бекор қилиш учун.",
+
+        "crane_control_panel": "{emoji} {name} - Бошқарув панели",
+        "crane_claims_balance": "📊 {claims} та олиш | 💰 {balance}",
+        "crane_active_accounts": "Фаол аккаунтлар ({active}/{total})",
+        "crane_no_accounts": "Фаол аккаунт йўқ - қўшиш учун + босинг",
+        "crane_trx_stats_heading": "📊 TRX Статистикаси",
+        "crane_live_logs_heading": "📡 Жонли логлар",
+        "crane_no_claims_yet": "⏳ Ҳали олишлар йўқ...",
+
+        "stats_col_account": "Аккаунт",
+        "stats_col_next_claim": "Кейинги олиш",
+        "stats_col_balance": "Баланс",
+
+        "add_account_title": "{emoji} Аккаунт қўшиш - {crane}",
+        "field_label": "Белги: {label}",
+        "add_account_send_email": "Аккаунт email'ини юборинг:",
+        "email_line": "Email: {email}",
+        "send_password": "Энди паролни юборинг:",
+        "password_line": "Парол: ✅",
+        "cookies_prompt": "Cookie (ихтиёрий - юборинг ёки Ўтказиб юбориш тугмасини босинг):",
+        "cookies_hint": "F12 > Консол > document.cookie",
+        "cookies_skipped": "Cookie: Ўтказиб юборилди",
+        "cookies_saved": "Cookie: ✅ ({chars} та белги)",
+        "ua_prompt": "User-Agent (ихтиёрий - юборинг ёки Ўтказиб юбориш тугмасини босинг):",
+        "ua_hint": "F12 > Консол > navigator.userAgent",
+        "cancel_hint": "/cancel — бекор қилиш учун.",
+
+        "account_added": "Аккаунт қўшилди!",
+        "field_cookies": "Cookie: {icon}",
+        "field_ua": "UA: {icon}",
+        "next_claim_in": "⏱️ Кейинги олиш: 60:00",
+
+        "settings_title": "⚙️ Созламалар",
+        "settings_api_key_line": "🔑 API Калит: {status}",
+        "settings_language_line": "🌐 Тил: {lang}",
+        "api_key_set": "✅ Ўрнатилган",
+        "api_key_not_set": "❌ Ўрнатилмаган",
+        "send_api_key": "🔑 API калитингизни юборинг:",
+        "api_key_saved": "✅ API Калит сақланди!",
+        "choose_language": "🌐 Тилни танланг:",
+    },
+}
+
+
+def t(chat_id: int, key: str, **kwargs) -> str:
+    """Foydalanuvchi tiliga qarab tarjima matnini qaytaradi."""
+    lang = get_user_settings(chat_id).get("language", "uz_latin")
+    table = TEXTS.get(lang, TEXTS["uz_latin"])
+    template = table.get(key, TEXTS["uz_latin"].get(key, key))
+    return template.format(**kwargs) if kwargs else template
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -87,23 +229,23 @@ def get_crane(name: str):
     return next((c for c in CRANES if c["name"] == name), None)
 
 
-def cancel_keyboard():
+def cancel_keyboard(chat_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")]
+        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")]
     ])
 
 
-def skip_cookies_keyboard():
+def skip_cookies_keyboard(chat_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")],
-        [InlineKeyboardButton(text="⏭️ Skip Cookies", callback_data="skip_cookies")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_skip_cookies"), callback_data="skip_cookies")],
     ])
 
 
-def skip_ua_keyboard():
+def skip_ua_keyboard(chat_id: int):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")],
-        [InlineKeyboardButton(text="⏭️ Skip UA", callback_data="skip_ua")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_skip_ua"), callback_data="skip_ua")],
     ])
 
 
@@ -143,21 +285,21 @@ def add_log(crane: dict, text: str):
 
 async def require_text(message: Message) -> str | None:
     if not message.text:
-        await message.answer("⚠️ Please send plain text, not a photo/sticker/file.\n\n/cancel to abort.")
+        await message.answer(t(message.chat.id, "plain_text_warning"))
         return None
     return message.text.strip()
 
 
 # ─── RICH TABLE - Asosiy dashboard ──────────────────────────────────────────
-def build_main_rich_message() -> InputRichMessage:
+def build_main_rich_message(chat_id: int) -> InputRichMessage:
     def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
 
     # 3 ta ustun: ACCOUNT, NEXT CLAIM, BALANCE
     rows = [[
-        cell("ACCOUNT", header=True),
-        cell("NEXT CLAIM", header=True, align="center"),
-        cell("BALANCE", header=True, align="right"),
+        cell(t(chat_id, "col_account"), header=True),
+        cell(t(chat_id, "col_next_claim"), header=True, align="center"),
+        cell(t(chat_id, "col_balance"), header=True, align="right"),
     ]]
 
     for crane in CRANES:
@@ -189,16 +331,15 @@ def build_main_rich_message() -> InputRichMessage:
     table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
 
     return InputRichMessage(blocks=[
-        InputRichBlockParagraph(text=[RichTextBold(text="📊 TRX Stats Dashboard")]),
+        InputRichBlockParagraph(text=[RichTextBold(text=t(chat_id, "dashboard_title"))]),
         table,
-        InputRichBlockParagraph(text="💡 Tap a crane button below to manage accounts")
+        InputRichBlockParagraph(text=t(chat_id, "dashboard_footer"))
     ])
 
 
-def build_keyboard() -> InlineKeyboardMarkup:
+def build_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     """Asosiy menyu (dashboard) klaviaturasi.
     - Barcha pick tugmalari (TronPick, DogePick, ...): ko'k (primary)
-    - Support: qizil (danger)
     - Settings va Refresh: yashil (success)
     """
     buttons = []
@@ -219,12 +360,12 @@ def build_keyboard() -> InlineKeyboardMarkup:
 
     buttons.append([
         InlineKeyboardButton(
-            text="⚙️ Settings",
+            text=t(chat_id, "btn_settings"),
             callback_data="settings",
             style=ButtonStyle.SUCCESS,
         ),
         InlineKeyboardButton(
-            text="🔄 Refresh",
+            text=t(chat_id, "btn_refresh"),
             callback_data="refresh",
             style=ButtonStyle.SUCCESS,
         ),
@@ -235,55 +376,59 @@ def build_keyboard() -> InlineKeyboardMarkup:
 
 def build_settings_text(chat_id: int) -> str:
     s = get_user_settings(chat_id)
-    api_status = "✅ Set" if s.get("api_key") else "❌ Not set"
-    lang_name = LANGUAGES.get(s.get("language", "uz"), s.get("language"))
+    api_status = t(chat_id, "api_key_set") if s.get("api_key") else t(chat_id, "api_key_not_set")
+    lang_name = LANGUAGES.get(s.get("language", "uz_latin"), s.get("language"))
     return (
-        f"⚙️ Settings\n\n"
-        f"🔑 API Key: {api_status}\n"
-        f"🌐 Language: {lang_name}"
+        f"{t(chat_id, 'settings_title')}\n\n"
+        f"{t(chat_id, 'settings_api_key_line', status=api_status)}\n"
+        f"{t(chat_id, 'settings_language_line', lang=lang_name)}"
     )
 
 
-def build_settings_keyboard() -> InlineKeyboardMarkup:
+def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔑 API Key", callback_data="settings_api_key")],
-        [InlineKeyboardButton(text="🌐 Language", callback_data="settings_language")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_api_key"), callback_data="settings_api_key")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_language"), callback_data="settings_language")],
         [InlineKeyboardButton(
-            text="🆘 Support",
+            text=t(chat_id, "btn_support"),
             url="https://t.me/alphadevlab",
             style=ButtonStyle.DANGER,
         )],
-        [InlineKeyboardButton(text="◀️ Back", callback_data="back_main")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main")],
     ])
 
 
-def build_language_keyboard() -> InlineKeyboardMarkup:
+def build_language_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     buttons = [[InlineKeyboardButton(text=name, callback_data=f"lang_{code}")] for code, name in LANGUAGES.items()]
-    buttons.append([InlineKeyboardButton(text="◀️ Back", callback_data="settings")])
+    buttons.append([InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="settings")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def settings_cancel_keyboard() -> InlineKeyboardMarkup:
+def settings_cancel_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_settings")]
+        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_settings")]
     ])
 
 
-def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
+def build_crane_keyboard(chat_id: int, crane_name: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Add Account", callback_data=f"add_account_{crane_name}")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_add_account"), callback_data=f"add_account_{crane_name}")],
         [
-            InlineKeyboardButton(text="🔄 Refresh", callback_data=f"crane_{crane_name}"),
-            InlineKeyboardButton(text="◀️ Back", callback_data="back_main"),
+            InlineKeyboardButton(text=t(chat_id, "btn_refresh"), callback_data=f"crane_{crane_name}"),
+            InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main"),
         ],
     ])
 
 
-def build_trx_stats_text(crane: dict) -> str:
+def build_trx_stats_text(chat_id: int, crane: dict) -> str:
     accounts = crane.get("accounts", [])
 
+    col_account = t(chat_id, "stats_col_account")
+    col_next = t(chat_id, "stats_col_next_claim")
+    col_balance = t(chat_id, "stats_col_balance")
+
     lines = []
-    lines.append(f"{'Account':<15} {'Next Claim':<12} {'Balance':<15}")
+    lines.append(f"{col_account:<15} {col_next:<12} {col_balance:<15}")
     lines.append("-" * 42)
 
     if not accounts:
@@ -302,24 +447,24 @@ def build_trx_stats_text(crane: dict) -> str:
     return "\n".join(lines)
 
 
-def build_live_logs_rich_block(crane: dict) -> InputRichBlockPreformatted:
+def build_live_logs_rich_block(chat_id: int, crane: dict) -> InputRichBlockPreformatted:
     logs = crane.get("logs", [])
     if not logs:
-        body = "⏳ No claims yet..."
+        body = t(chat_id, "crane_no_claims_yet")
     else:
         body = "\n".join(f"[{e['time']}] {e['text']}" for e in logs[-8:])
     return InputRichBlockPreformatted(text=body)
 
 
-def build_crane_rich_message(crane: dict) -> InputRichMessage:
+def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
     accounts = crane.get("accounts", [])
     acc_count = len(accounts)
     active_count = sum(1 for a in accounts if a.get("active", False))
 
     blocks = [
-        InputRichBlockParagraph(text=[RichTextBold(text=f"{crane['emoji']} {crane['name']} - Control Panel")]),
-        InputRichBlockParagraph(text=f"📊 {crane['claims']} claims | 💰 {crane['balance']}"),
-        InputRichBlockSectionHeading(text=f"Active accounts ({active_count}/{acc_count})", size=4),
+        InputRichBlockParagraph(text=[RichTextBold(text=t(chat_id, "crane_control_panel", emoji=crane['emoji'], name=crane['name']))]),
+        InputRichBlockParagraph(text=t(chat_id, "crane_claims_balance", claims=crane['claims'], balance=crane['balance'])),
+        InputRichBlockSectionHeading(text=t(chat_id, "crane_active_accounts", active=active_count, total=acc_count), size=4),
     ]
 
     if accounts:
@@ -331,14 +476,14 @@ def build_crane_rich_message(crane: dict) -> InputRichMessage:
             ]))
         blocks.append(InputRichBlockList(items=items))
     else:
-        blocks.append(InputRichBlockParagraph(text="No active accounts - tap + to add"))
+        blocks.append(InputRichBlockParagraph(text=t(chat_id, "crane_no_accounts")))
 
-    blocks.append(InputRichBlockSectionHeading(text="📊 TRX Stats", size=4))
-    stats_text = build_trx_stats_text(crane)
+    blocks.append(InputRichBlockSectionHeading(text=t(chat_id, "crane_trx_stats_heading"), size=4))
+    stats_text = build_trx_stats_text(chat_id, crane)
     blocks.append(InputRichBlockPreformatted(text=stats_text))
 
-    blocks.append(InputRichBlockSectionHeading(text="📡 Live Logs", size=4))
-    blocks.append(build_live_logs_rich_block(crane))
+    blocks.append(InputRichBlockSectionHeading(text=t(chat_id, "crane_live_logs_heading"), size=4))
+    blocks.append(build_live_logs_rich_block(chat_id, crane))
 
     return InputRichMessage(blocks=blocks)
 
@@ -364,8 +509,8 @@ async def auto_refresh():
                     await bot.edit_message_rich(
                         chat_id=chat_id,
                         message_id=message_id,
-                        rich_message=build_main_rich_message(),
-                        reply_markup=build_keyboard()
+                        rich_message=build_main_rich_message(chat_id),
+                        reply_markup=build_keyboard(chat_id)
                     )
                 except Exception as e:
                     # Agar xabar o'chirilgan bo'lsa, ro'yxatdan o'chiramiz
@@ -382,8 +527,8 @@ async def auto_refresh():
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     msg = await message.answer_rich(
-        rich_message=build_main_rich_message(),
-        reply_markup=build_keyboard()
+        rich_message=build_main_rich_message(message.chat.id),
+        reply_markup=build_keyboard(message.chat.id)
     )
     # Xabarni ro'yxatga qo'shamiz
     main_messages[message.chat.id] = msg.message_id
@@ -396,18 +541,18 @@ async def cmd_cancel(message: Message, state: FSMContext):
     data = await state.get_data()
     crane_name = data.get("crane_name", "")
     await state.clear()
-    await message.answer("❌ Cancelled.")
+    await message.answer(t(message.chat.id, "cancelled"))
     if current_state and current_state.startswith("SettingsFSM"):
         await message.answer(
             text=build_settings_text(message.chat.id),
-            reply_markup=build_settings_keyboard(),
+            reply_markup=build_settings_keyboard(message.chat.id),
         )
     elif crane_name:
         crane = get_crane(crane_name)
         if crane:
             await message.answer_rich(
-                rich_message=build_crane_rich_message(crane),
-                reply_markup=build_crane_keyboard(crane_name),
+                rich_message=build_crane_rich_message(message.chat.id, crane),
+                reply_markup=build_crane_keyboard(message.chat.id, crane_name),
             )
 
 
@@ -420,12 +565,12 @@ async def cb_refresh(call: CallbackQuery, state: FSMContext):
     except:
         pass
     msg = await call.message.answer_rich(
-        rich_message=build_main_rich_message(),
-        reply_markup=build_keyboard()
+        rich_message=build_main_rich_message(call.message.chat.id),
+        reply_markup=build_keyboard(call.message.chat.id)
     )
     # Xabarni ro'yxatga yangilaymiz
     main_messages[call.message.chat.id] = msg.message_id
-    await call.answer("♻️ Updated!")
+    await call.answer(t(call.message.chat.id, "updated"))
 
 
 # ─── Back to main ────────────────────────────────────────────────────────────
@@ -437,8 +582,8 @@ async def cb_back_main(call: CallbackQuery, state: FSMContext):
     except:
         pass
     msg = await call.message.answer_rich(
-        rich_message=build_main_rich_message(),
-        reply_markup=build_keyboard()
+        rich_message=build_main_rich_message(call.message.chat.id),
+        reply_markup=build_keyboard(call.message.chat.id)
     )
     # Xabarni ro'yxatga yangilaymiz
     main_messages[call.message.chat.id] = msg.message_id
@@ -451,15 +596,15 @@ async def cb_crane(call: CallbackQuery, state: FSMContext):
     crane_name = call.data.replace("crane_", "")
     crane = get_crane(crane_name)
     if not crane:
-        await call.answer("Not found!", show_alert=True)
+        await call.answer(t(call.message.chat.id, "not_found"), show_alert=True)
         return
     await call.message.delete()
     # Crane panelga o'tganda main xabarni ro'yxatdan o'chiramiz
     if call.message.chat.id in main_messages:
         del main_messages[call.message.chat.id]
     await call.message.answer_rich(
-        rich_message=build_crane_rich_message(crane),
-        reply_markup=build_crane_keyboard(crane_name),
+        rich_message=build_crane_rich_message(call.message.chat.id, crane),
+        reply_markup=build_crane_keyboard(call.message.chat.id, crane_name),
     )
     await call.answer()
 
@@ -470,7 +615,7 @@ async def cb_add_account(call: CallbackQuery, state: FSMContext):
     crane_name = call.data.replace("add_account_", "")
     crane = get_crane(crane_name)
     if not crane:
-        await call.answer("Not found!", show_alert=True)
+        await call.answer(t(call.message.chat.id, "not_found"), show_alert=True)
         return
 
     acc_num = len(crane["accounts"]) + 1
@@ -479,15 +624,16 @@ async def cb_add_account(call: CallbackQuery, state: FSMContext):
     await state.set_state(AddAccount.email)
     await state.update_data(crane_name=crane_name, label=label)
 
+    chat_id = call.message.chat.id
     await call.message.delete()
     await call.message.answer(
         text=(
-            f"{crane['emoji']} Add Account - {crane_name}\n\n"
-            f"Label: {label}\n\n"
-            f"Send the account email:\n\n"
-            f"/cancel to abort."
+            f"{t(chat_id, 'add_account_title', emoji=crane['emoji'], crane=crane_name)}\n\n"
+            f"{t(chat_id, 'field_label', label=label)}\n\n"
+            f"{t(chat_id, 'add_account_send_email')}\n\n"
+            f"{t(chat_id, 'cancel_hint')}"
         ),
-        reply_markup=cancel_keyboard(),
+        reply_markup=cancel_keyboard(chat_id),
     )
     await call.answer()
 
@@ -501,13 +647,14 @@ async def fsm_email(message: Message, state: FSMContext):
     await state.update_data(email=email)
     await state.set_state(AddAccount.password)
 
+    chat_id = message.chat.id
     await message.answer(
         text=(
-            f"Email: {email}\n\n"
-            f"Now send the password:\n\n"
-            f"/cancel to abort."
+            f"{t(chat_id, 'email_line', email=email)}\n\n"
+            f"{t(chat_id, 'send_password')}\n\n"
+            f"{t(chat_id, 'cancel_hint')}"
         ),
-        reply_markup=cancel_keyboard(),
+        reply_markup=cancel_keyboard(chat_id),
     )
 
 
@@ -520,14 +667,15 @@ async def fsm_password(message: Message, state: FSMContext):
     await state.update_data(password=password)
     await state.set_state(AddAccount.cookies)
 
+    chat_id = message.chat.id
     await message.answer(
         text=(
-            f"Password: ✅\n\n"
-            f"Cookies (optional - send cookies or tap Skip):\n\n"
-            f"F12 > Console > document.cookie\n\n"
-            f"/cancel to abort."
+            f"{t(chat_id, 'password_line')}\n\n"
+            f"{t(chat_id, 'cookies_prompt')}\n\n"
+            f"{t(chat_id, 'cookies_hint')}\n\n"
+            f"{t(chat_id, 'cancel_hint')}"
         ),
-        reply_markup=skip_cookies_keyboard(),
+        reply_markup=skip_cookies_keyboard(chat_id),
     )
 
 
@@ -536,14 +684,15 @@ async def fsm_password(message: Message, state: FSMContext):
 async def cb_skip_cookies(call: CallbackQuery, state: FSMContext):
     await state.update_data(cookies=None)
     await state.set_state(AddAccount.ua)
+    chat_id = call.message.chat.id
     await call.message.edit_text(
         text=(
-            f"Cookies: Skipped\n\n"
-            f"User-Agent (optional - send UA or tap Skip):\n\n"
-            f"F12 > Console > navigator.userAgent\n\n"
-            f"/cancel to abort."
+            f"{t(chat_id, 'cookies_skipped')}\n\n"
+            f"{t(chat_id, 'ua_prompt')}\n\n"
+            f"{t(chat_id, 'ua_hint')}\n\n"
+            f"{t(chat_id, 'cancel_hint')}"
         ),
-        reply_markup=skip_ua_keyboard(),
+        reply_markup=skip_ua_keyboard(chat_id),
     )
     await call.answer()
 
@@ -558,14 +707,15 @@ async def fsm_cookies(message: Message, state: FSMContext):
     await state.update_data(cookies=cookies)
     await state.set_state(AddAccount.ua)
 
+    chat_id = message.chat.id
     await message.answer(
         text=(
-            f"Cookies: ✅ ({chars} chars)\n\n"
-            f"User-Agent (optional - send UA or tap Skip):\n\n"
-            f"F12 > Console > navigator.userAgent\n\n"
-            f"/cancel to abort."
+            f"{t(chat_id, 'cookies_saved', chars=chars)}\n\n"
+            f"{t(chat_id, 'ua_prompt')}\n\n"
+            f"{t(chat_id, 'ua_hint')}\n\n"
+            f"{t(chat_id, 'cancel_hint')}"
         ),
-        reply_markup=skip_ua_keyboard(),
+        reply_markup=skip_ua_keyboard(chat_id),
     )
 
 
@@ -624,20 +774,21 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
     cookies_icon = "✅" if cookies else "⏭️"
     ua_icon = "✅" if ua else "⏭️"
 
+    chat_id = message.chat.id
     summary = (
-        f"Account added!\n\n"
+        f"{t(chat_id, 'account_added')}\n\n"
         f"{crane['emoji']} {crane_name} #{len(crane['accounts'])}\n"
-        f"Label: {label}\n"
-        f"Email: {email}\n"
-        f"Password: ✅\n"
-        f"Cookies: {cookies_icon}\n"
-        f"UA: {ua_icon}\n\n"
-        f"⏱️ Next claim in: 60:00"
+        f"{t(chat_id, 'field_label', label=label)}\n"
+        f"{t(chat_id, 'email_line', email=email)}\n"
+        f"{t(chat_id, 'password_line')}\n"
+        f"{t(chat_id, 'field_cookies', icon=cookies_icon)}\n"
+        f"{t(chat_id, 'field_ua', icon=ua_icon)}\n\n"
+        f"{t(chat_id, 'next_claim_in')}"
     )
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"◀️ Back to {crane_name}", callback_data=f"crane_{crane_name}")],
-        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="back_main")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_back_to_crane", crane=crane_name), callback_data=f"crane_{crane_name}")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_main_menu"), callback_data="back_main")],
     ])
 
     await state.clear()
@@ -651,21 +802,22 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
     crane_name = data.get("crane_name", "")
     await state.clear()
 
+    chat_id = call.message.chat.id
     crane = get_crane(crane_name)
     if crane:
         await call.message.delete()
         await call.message.answer_rich(
-            rich_message=build_crane_rich_message(crane),
-            reply_markup=build_crane_keyboard(crane_name),
+            rich_message=build_crane_rich_message(chat_id, crane),
+            reply_markup=build_crane_keyboard(chat_id, crane_name),
         )
     else:
         await call.message.delete()
         msg = await call.message.answer_rich(
-            rich_message=build_main_rich_message(),
-            reply_markup=build_keyboard()
+            rich_message=build_main_rich_message(chat_id),
+            reply_markup=build_keyboard(chat_id)
         )
-        main_messages[call.message.chat.id] = msg.message_id
-    await call.answer("❌ Cancelled.")
+        main_messages[chat_id] = msg.message_id
+    await call.answer(t(chat_id, "cancelled"))
 
 
 # ─── Settings: asosiy menyu ──────────────────────────────────────────────────
@@ -680,7 +832,7 @@ async def cb_settings(call: CallbackQuery, state: FSMContext):
         del main_messages[call.message.chat.id]
     await call.message.answer(
         text=build_settings_text(call.message.chat.id),
-        reply_markup=build_settings_keyboard(),
+        reply_markup=build_settings_keyboard(call.message.chat.id),
     )
     await call.answer()
 
@@ -689,13 +841,14 @@ async def cb_settings(call: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "settings_api_key")
 async def cb_settings_api_key(call: CallbackQuery, state: FSMContext):
     await state.set_state(SettingsFSM.api_key)
+    chat_id = call.message.chat.id
     await call.message.delete()
     await call.message.answer(
         text=(
-            "🔑 Send your API Key:\n\n"
-            "/cancel to abort."
+            f"{t(chat_id, 'send_api_key')}\n\n"
+            f"{t(chat_id, 'cancel_hint')}"
         ),
-        reply_markup=settings_cancel_keyboard(),
+        reply_markup=settings_cancel_keyboard(chat_id),
     )
     await call.answer()
 
@@ -708,18 +861,20 @@ async def fsm_api_key(message: Message, state: FSMContext):
     settings = get_user_settings(message.chat.id)
     settings["api_key"] = api_key
     await state.clear()
+    chat_id = message.chat.id
     await message.answer(
-        text=f"✅ API Key saved!\n\n{build_settings_text(message.chat.id)}",
-        reply_markup=build_settings_keyboard(),
+        text=f"{t(chat_id, 'api_key_saved')}\n\n{build_settings_text(chat_id)}",
+        reply_markup=build_settings_keyboard(chat_id),
     )
 
 
 # ─── Settings: Language tanlash ──────────────────────────────────────────────
 @dp.callback_query(F.data == "settings_language")
 async def cb_settings_language(call: CallbackQuery):
+    chat_id = call.message.chat.id
     await call.message.edit_text(
-        text="🌐 Tilni tanlang:",
-        reply_markup=build_language_keyboard(),
+        text=t(chat_id, "choose_language"),
+        reply_markup=build_language_keyboard(chat_id),
     )
     await call.answer()
 
@@ -727,14 +882,15 @@ async def cb_settings_language(call: CallbackQuery):
 @dp.callback_query(F.data.startswith("lang_"))
 async def cb_lang_select(call: CallbackQuery):
     code = call.data.replace("lang_", "")
+    chat_id = call.message.chat.id
     if code not in LANGUAGES:
-        await call.answer("Not found!", show_alert=True)
+        await call.answer(t(chat_id, "not_found"), show_alert=True)
         return
-    settings = get_user_settings(call.message.chat.id)
+    settings = get_user_settings(chat_id)
     settings["language"] = code
     await call.message.edit_text(
-        text=build_settings_text(call.message.chat.id),
-        reply_markup=build_settings_keyboard(),
+        text=build_settings_text(chat_id),
+        reply_markup=build_settings_keyboard(chat_id),
     )
     await call.answer(f"✅ {LANGUAGES[code]}")
 
@@ -743,12 +899,13 @@ async def cb_lang_select(call: CallbackQuery):
 @dp.callback_query(F.data == "cancel_settings")
 async def cb_cancel_settings(call: CallbackQuery, state: FSMContext):
     await state.clear()
+    chat_id = call.message.chat.id
     await call.message.delete()
     await call.message.answer(
-        text=build_settings_text(call.message.chat.id),
-        reply_markup=build_settings_keyboard(),
+        text=build_settings_text(chat_id),
+        reply_markup=build_settings_keyboard(chat_id),
     )
-    await call.answer("❌ Cancelled.")
+    await call.answer(t(chat_id, "cancelled"))
 
 
 # ─── Startup ─────────────────────────────────────────────────────────────────
