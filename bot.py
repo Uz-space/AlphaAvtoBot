@@ -382,8 +382,10 @@ def build_settings_text(chat_id: int) -> str:
 
 
 def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
+    api_key_set = bool(get_user_settings(chat_id).get("api_key"))
+    api_key_style = ButtonStyle.SUCCESS if api_key_set else ButtonStyle.DANGER
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(chat_id, "btn_api_key"), callback_data="settings_api_key")],
+        [InlineKeyboardButton(text=t(chat_id, "btn_api_key"), callback_data="settings_api_key", style=api_key_style)],
         [InlineKeyboardButton(text=t(chat_id, "btn_language"), callback_data="settings_language")],
         [InlineKeyboardButton(
             text=t(chat_id, "btn_support"),
