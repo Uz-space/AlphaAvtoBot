@@ -353,15 +353,35 @@ def build_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def build_settings_text(chat_id: int) -> str:
+def build_settings_rich_message(chat_id: int) -> InputRichMessage:
+    def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
+        return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
+
     s = get_user_settings(chat_id)
     api_status = t(chat_id, "api_key_set") if s.get("api_key") else t(chat_id, "api_key_not_set")
     lang_name = LANGUAGES.get(s.get("language", "uz_latin"), s.get("language"))
-    return (
-        f"{t(chat_id, 'settings_title')}\n\n"
-        f"{t(chat_id, 'settings_api_key_line', status=api_status)}\n"
-        f"{t(chat_id, 'settings_language_line', lang=lang_name)}"
+
+    # Sarlavha - alohida, mustaqil jadval (ALPHA uslubida)
+    title_table = InputRichBlockTable(
+        cells=[[cell(t(chat_id, "settings_title"), header=True, align="center")]],
+        is_bordered=True,
+        is_striped=True,
     )
+
+    # Ma'lumotlar - alohida jadval
+    info_table = InputRichBlockTable(
+        cells=[
+            [cell(t(chat_id, "settings_api_key_line", status=api_status))],
+            [cell(t(chat_id, "settings_language_line", lang=lang_name))],
+        ],
+        is_bordered=True,
+        is_striped=True,
+    )
+
+    return InputRichMessage(blocks=[
+        title_table,
+        info_table,
+    ])
 
 
 def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
@@ -518,8 +538,8 @@ async def cmd_cancel(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(t(message.chat.id, "cancelled"))
     if current_state and current_state.startswith("SettingsFSM"):
-        await message.answer(
-            text=build_settings_text(message.chat.id),
+        await message.answer_rich(
+            rich_message=build_settings_rich_message(message.chat.id),
             reply_markup=build_settings_keyboard(message.chat.id),
         )
     elif crane_name:
@@ -728,8 +748,8 @@ async def cb_settings(call: CallbackQuery, state: FSMContext):
         pass
     if call.message.chat.id in main_messages:
         del main_messages[call.message.chat.id]
-    await call.message.answer(
-        text=build_settings_text(call.message.chat.id),
+    await call.message.answer_rich(
+        rich_message=build_settings_rich_message(call.message.chat.id),
         reply_markup=build_settings_keyboard(call.message.chat.id),
     )
     await call.answer()
@@ -760,8 +780,8 @@ async def fsm_api_key(message: Message, state: FSMContext):
     settings["api_key"] = api_key
     await state.clear()
     chat_id = message.chat.id
-    await message.answer(
-        text=build_settings_text(chat_id),
+    await message.answer_rich(
+        rich_message=build_settings_rich_message(chat_id),
         reply_markup=build_settings_keyboard(chat_id),
     )
 
@@ -786,8 +806,9 @@ async def cb_lang_select(call: CallbackQuery):
         return
     settings = get_user_settings(chat_id)
     settings["language"] = code
-    await call.message.edit_text(
-        text=build_settings_text(chat_id),
+    await call.message.delete()
+    await call.message.answer_rich(
+        rich_message=build_settings_rich_message(chat_id),
         reply_markup=build_settings_keyboard(chat_id),
     )
     await call.answer(f"✅ {LANGUAGES[code]}")
@@ -799,8 +820,8 @@ async def cb_cancel_settings(call: CallbackQuery, state: FSMContext):
     await state.clear()
     chat_id = call.message.chat.id
     await call.message.delete()
-    await call.message.answer(
-        text=build_settings_text(chat_id),
+    await call.message.answer_rich(
+        rich_message=build_settings_rich_message(chat_id),
         reply_markup=build_settings_keyboard(chat_id),
     )
     await call.answer(t(chat_id, "cancelled"))
