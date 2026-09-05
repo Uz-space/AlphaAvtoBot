@@ -249,25 +249,50 @@ async def require_text(message: Message) -> str | None:
 
 # ─── RICH TABLE - Asosiy dashboard ──────────────────────────────────────────
 def build_main_rich_message(chat_id: int) -> InputRichMessage:
-    # Sarlavha qatori - 3 ustun (kran nomlari), bu jadvalni to'liq kenglikda ushlab turadi
-    header_row = [
-        RichBlockTableCell(align="center", valign="middle", text=CRANES[0]["name"], is_header=True),
-        RichBlockTableCell(align="center", valign="middle", text=CRANES[1]["name"], is_header=True),
-        RichBlockTableCell(align="center", valign="middle", text=CRANES[2]["name"], is_header=True),
-    ]
+    def cell(text: str, header: bool = False, align: str = "left", colspan: int | None = None) -> RichBlockTableCell:
+        return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header, colspan=colspan)
 
-    # ALPHA - butun kenglikka yoyilgan qator (colspan=3)
+    # ALPHA - eng tepada, butun kenglikka yoyilgan (colspan=3)
     alpha_row = [
-        RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "dashboard_title"), is_header=False, colspan=3),
+        cell(t(chat_id, "dashboard_title"), align="center", colspan=3),
     ]
 
-    # Motivatsion matn - butun kenglikka yoyilgan qator (colspan=3)
+    # Sarlavha qatori - 3 ustun: AKKAUNT / KEYINGI OLISH / BALANS
+    header_row = [
+        cell(t(chat_id, "col_account"), header=True),
+        cell(t(chat_id, "col_next_claim"), header=True, align="center"),
+        cell(t(chat_id, "col_balance"), header=True, align="right"),
+    ]
+
+    data_rows = []
+    for crane in CRANES:
+        accounts = crane.get("accounts", [])
+        crane_timer = get_crane_timer(crane['name'])
+
+        if not accounts:
+            data_rows.append([
+                cell(crane['name']),
+                cell(get_countdown(crane_timer), align="center"),
+                cell("0.000000", align="right"),
+            ])
+        else:
+            for acc in accounts:
+                email = acc.get("email", "Unknown")
+                balance = acc.get("balance", 0.0)
+                countdown = get_account_countdown(acc.get("next_claim_at"))
+                data_rows.append([
+                    cell(email),
+                    cell(countdown, align="center"),
+                    cell(f"{balance:.6f}", align="right"),
+                ])
+
+    # Motivatsion matn - pastda, butun kenglikka yoyilgan (colspan=3)
     motivation_row = [
-        RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "motivation_text"), is_header=False, colspan=3),
+        cell(t(chat_id, "motivation_text"), align="center", colspan=3),
     ]
 
     main_table = InputRichBlockTable(
-        cells=[alpha_row, header_row, motivation_row],
+        cells=[alpha_row, header_row, *data_rows, motivation_row],
         is_bordered=True,
         is_striped=True,
     )
