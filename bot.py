@@ -249,15 +249,31 @@ async def require_text(message: Message) -> str | None:
 
 # ─── RICH TABLE - Asosiy dashboard ──────────────────────────────────────────
 def build_main_rich_message(chat_id: int) -> InputRichMessage:
-    title_cell = [[RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "dashboard_title"), is_header=True)]]
-    title_table = InputRichBlockTable(cells=title_cell, is_bordered=True, is_striped=True)
+    # Sarlavha qatori - 3 ustun (kran nomlari), bu jadvalni to'liq kenglikda ushlab turadi
+    header_row = [
+        RichBlockTableCell(align="center", valign="middle", text=CRANES[0]["name"], is_header=True),
+        RichBlockTableCell(align="center", valign="middle", text=CRANES[1]["name"], is_header=True),
+        RichBlockTableCell(align="center", valign="middle", text=CRANES[2]["name"], is_header=True),
+    ]
 
-    motivation_cell = [[RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "motivation_text"), is_header=False)]]
-    motivation_table = InputRichBlockTable(cells=motivation_cell, is_bordered=True, is_striped=True)
+    # ALPHA - butun kenglikka yoyilgan qator (colspan=3)
+    alpha_row = [
+        RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "dashboard_title"), is_header=False, colspan=3),
+    ]
+
+    # Motivatsion matn - butun kenglikka yoyilgan qator (colspan=3)
+    motivation_row = [
+        RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "motivation_text"), is_header=False, colspan=3),
+    ]
+
+    main_table = InputRichBlockTable(
+        cells=[alpha_row, header_row, motivation_row],
+        is_bordered=True,
+        is_striped=True,
+    )
 
     return InputRichMessage(blocks=[
-        title_table,
-        motivation_table,
+        main_table,
     ])
 
 
