@@ -77,9 +77,8 @@ TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
         "motivation_text": "🚀 Har bir qadam katta yutuqqa boshlaydi — sabr va izchillik bilan davom eting, natija albatta keladi!",
-        "col_account": "AKKAUNT",
-        "col_next_claim": "KEYINGI OLISH",
-        "col_balance": "BALANS",
+        "col_account": "Akkauntlar",
+        "col_balance": "Balanslari",
 
         "btn_settings": "⚙️ Sozlamalar",
         "btn_refresh": "🔄 Yangilash",
@@ -132,9 +131,8 @@ TEXTS = {
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
         "motivation_text": "🚀 Ҳар бир қадам катта ютуққа бошлайди — сабр ва изчиллик билан давом этинг, натижа албатта келади!",
-        "col_account": "АККАУНТ",
-        "col_next_claim": "КЕЙИНГИ ОЛИШ",
-        "col_balance": "БАЛАНС",
+        "col_account": "Аккаунтлар",
+        "col_balance": "Баланслари",
 
         "btn_settings": "⚙️ Созламалар",
         "btn_refresh": "🔄 Янгилаш",
@@ -259,32 +257,27 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Sarlavha qatori - 3 ustun: AKKAUNT / KEYINGI OLISH / BALANS
+    # Sarlavha qatori - 2 ustun: Akkauntlar / Balanslari
     header_row = [
         cell(t(chat_id, "col_account"), header=True),
-        cell(t(chat_id, "col_next_claim"), header=True, align="center"),
         cell(t(chat_id, "col_balance"), header=True, align="right"),
     ]
 
     data_rows = []
     for crane in CRANES:
         accounts = crane.get("accounts", [])
-        crane_timer = get_crane_timer(crane['name'])
 
         if not accounts:
             data_rows.append([
                 cell(crane['name']),
-                cell(get_countdown(crane_timer), align="center"),
                 cell("0.000000", align="right"),
             ])
         else:
             for acc in accounts:
                 email = acc.get("email", "Unknown")
                 balance = acc.get("balance", 0.0)
-                countdown = get_account_countdown(acc.get("next_claim_at"))
                 data_rows.append([
                     cell(email),
-                    cell(countdown, align="center"),
                     cell(f"{balance:.6f}", align="right"),
                 ])
 
