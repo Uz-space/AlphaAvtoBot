@@ -2,6 +2,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from aiogram import Bot, Dispatcher, F
+from aiogram.enums import ButtonStyle
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
     InputRichMessage, InputRichBlockParagraph, InputRichBlockSectionHeading,
@@ -70,21 +71,21 @@ def get_crane(name: str):
 
 def cancel_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")]
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add", style=ButtonStyle.DANGER)]
     ])
 
 
 def skip_cookies_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")],
-        [InlineKeyboardButton(text="⏭️ Skip Cookies", callback_data="skip_cookies")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add", style=ButtonStyle.DANGER)],
+        [InlineKeyboardButton(text="⏭️ Skip Cookies", callback_data="skip_cookies", style=ButtonStyle.PRIMARY)],
     ])
 
 
 def skip_ua_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add")],
-        [InlineKeyboardButton(text="⏭️ Skip UA", callback_data="skip_ua")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_add", style=ButtonStyle.DANGER)],
+        [InlineKeyboardButton(text="⏭️ Skip UA", callback_data="skip_ua", style=ButtonStyle.PRIMARY)],
     ])
 
 
@@ -106,11 +107,11 @@ def get_account_countdown(next_claim_at) -> str:
     """Account timer - akkaunt qo'shilgan vaqtdan boshlab sanaydi"""
     if not next_claim_at:
         return "--:--"
-    
+
     remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
     if remaining <= 0:
         return "Ready"
-    
+
     return format_countdown(remaining)
 
 
@@ -144,7 +145,7 @@ def build_main_rich_message() -> InputRichMessage:
     for crane in CRANES:
         accounts = crane.get("accounts", [])
         crane_timer = get_crane_timer(crane['name'])
-        
+
         if not accounts:
             # Akkaunt yo'q - kran nomi va kran timeri
             rows.append([
@@ -157,10 +158,10 @@ def build_main_rich_message() -> InputRichMessage:
             for acc in accounts:
                 email = acc.get("email", "Unknown")
                 balance = acc.get("balance", 0.0)
-                
+
                 # Akkaunt timeri
                 countdown = get_account_countdown(acc.get("next_claim_at"))
-                
+
                 rows.append([
                     cell(f"{crane['emoji']} {email}"),
                     cell(countdown, align="center"),
@@ -168,7 +169,7 @@ def build_main_rich_message() -> InputRichMessage:
                 ])
 
     table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
-    
+
     return InputRichMessage(blocks=[
         InputRichBlockParagraph(text=[RichTextBold(text="📊 TRX Stats Dashboard")]),
         table,
@@ -177,14 +178,19 @@ def build_main_rich_message() -> InputRichMessage:
 
 
 def build_keyboard() -> InlineKeyboardMarkup:
+    """Asosiy menyu klaviaturasi.
+    - Barcha pick tugmalari: qizil (danger)
+    - Support: qizil (danger)
+    - Settings va Refresh: yashil (success)
+    """
     buttons = []
     row = []
-    
+
     for c in CRANES:
-        icon = "🟢" if c["active"] else "⚠️"
         btn = InlineKeyboardButton(
-            text=f"{icon} {c['name']}",
-            callback_data=f"crane_{c['name']}"
+            text=f"{c['name']}",
+            callback_data=f"crane_{c['name']}",
+            style=ButtonStyle.DANGER,
         )
         row.append(btn)
         if len(row) == 2:
@@ -194,14 +200,26 @@ def build_keyboard() -> InlineKeyboardMarkup:
         buttons.append(row)
 
     buttons.append([
-        InlineKeyboardButton(text="🆘 Support", url="https://t.me/alphadevlab"),
+        InlineKeyboardButton(
+            text="🆘 Support",
+            url="https://t.me/alphadevlab",
+            style=ButtonStyle.DANGER,
+        ),
     ])
 
     buttons.append([
-        InlineKeyboardButton(text="⚙️ Settings", callback_data="settings"),
-        InlineKeyboardButton(text="🔄", callback_data="refresh"),
+        InlineKeyboardButton(
+            text="⚙️ Settings",
+            callback_data="settings",
+            style=ButtonStyle.SUCCESS,
+        ),
+        InlineKeyboardButton(
+            text="🔄 Refresh",
+            callback_data="refresh",
+            style=ButtonStyle.SUCCESS,
+        ),
     ])
-    
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -217,11 +235,11 @@ def build_crane_keyboard(crane_name: str) -> InlineKeyboardMarkup:
 
 def build_trx_stats_text(crane: dict) -> str:
     accounts = crane.get("accounts", [])
-    
+
     lines = []
     lines.append(f"{'Account':<15} {'Next Claim':<12} {'Balance':<15}")
     lines.append("-" * 42)
-    
+
     if not accounts:
         # Akkaunt yo'q - kran timeri
         crane_timer = get_crane_timer(crane['name'])
@@ -230,11 +248,11 @@ def build_trx_stats_text(crane: dict) -> str:
         for acc in accounts:
             email = acc.get("email", "Unknown")[:15]
             balance = acc.get("balance", 0.0)
-            
+
             countdown = get_account_countdown(acc.get("next_claim_at"))
-            
+
             lines.append(f"{email:<15} {countdown:<12} {balance:<15.6f}")
-    
+
     return "\n".join(lines)
 
 
@@ -272,7 +290,7 @@ def build_crane_rich_message(crane: dict) -> InputRichMessage:
     blocks.append(InputRichBlockSectionHeading(text="📊 TRX Stats", size=4))
     stats_text = build_trx_stats_text(crane)
     blocks.append(InputRichBlockPreformatted(text=stats_text))
-    
+
     blocks.append(InputRichBlockSectionHeading(text="📡 Live Logs", size=4))
     blocks.append(build_live_logs_rich_block(crane))
 
