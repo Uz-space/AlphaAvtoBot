@@ -86,7 +86,7 @@ TEXTS = {
         "btn_add_account": "➕ Akkaunt qo'shish",
         "btn_back": "◀️ Orqaga",
         "btn_cancel": "❌ Bekor qilish",
-        "btn_api_key": "🔑 API Kalit",
+        "btn_api_key": "🔑 API",
         "btn_language": "🌐 Til",
         "settings_id_label": "🆔 ID",
         "btn_support": "🆘 Yordam",
@@ -122,7 +122,7 @@ TEXTS = {
         "next_claim_in": "⏱️ Keyingi olish: 60:00",
 
         "settings_title": "⚙️ Sozlamalar",
-        "settings_api_key_line": "🔑 API Kalit: {status}",
+        "settings_api_key_line": "🔑 API: {status}",
         "settings_language_line": "🌐 Til: {lang}",
         "api_key_set": "✅ O'rnatilgan",
         "api_key_not_set": "❌ O'rnatilmagan",
@@ -178,7 +178,7 @@ TEXTS = {
         "next_claim_in": "⏱️ Кейинги олиш: 60:00",
 
         "settings_title": "⚙️ Созламалар",
-        "settings_api_key_line": "🔑 API Калит: {status}",
+        "settings_api_key_line": "🔑 API: {status}",
         "settings_language_line": "🌐 Тил: {lang}",
         "api_key_set": "✅ Ўрнатилган",
         "api_key_not_set": "❌ Ўрнатилмаган",
