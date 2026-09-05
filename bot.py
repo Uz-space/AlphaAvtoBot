@@ -63,8 +63,8 @@ class SettingsFSM(StatesGroup):
 USER_SETTINGS = {}  # chat_id -> {"api_key": str|None, "language": "uz_latin"|"uz_cyrillic"}
 
 LANGUAGES = {
-    "uz_latin": "🇺🇿 O'zbekcha (lotin)",
-    "uz_cyrillic": "🇺🇿 Ўзбекча (кирилл)",
+    "uz_latin": "🇺🇿 O'zbekcha",
+    "uz_cyrillic": "🇺🇿 Ўзбекча",
 }
 
 
