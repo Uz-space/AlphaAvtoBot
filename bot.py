@@ -63,8 +63,8 @@ class SettingsFSM(StatesGroup):
 USER_SETTINGS = {}  # chat_id -> {"api_key": str|None, "language": "uz_latin"|"uz_cyrillic"}
 
 LANGUAGES = {
-    "uz_latin": "🇺🇿 O'zbekcha",
-    "uz_cyrillic": "🇺🇿 Ўзбекча",
+    "uz_latin": "🇺🇿 O'zbekcha (lotin)",
+    "uz_cyrillic": "🇺🇿 Ўзбекча (кирилл)",
 }
 
 
@@ -76,6 +76,7 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
+        "motivation_text": "🚀 Har bir qadam - katta yutuqqa boshlaydi!",
         "col_account": "AKKAUNT",
         "col_next_claim": "KEYINGI OLISH",
         "col_balance": "BALANS",
@@ -130,6 +131,7 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
+        "motivation_text": "🚀 Ҳар бир қадам - катта ютуққа бошлайди!",
         "col_account": "АККАУНТ",
         "col_next_claim": "КЕЙИНГИ ОЛИШ",
         "col_balance": "БАЛАНС",
@@ -247,50 +249,15 @@ async def require_text(message: Message) -> str | None:
 
 # ─── RICH TABLE - Asosiy dashboard ──────────────────────────────────────────
 def build_main_rich_message(chat_id: int) -> InputRichMessage:
-    def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
-        return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
-
-    # 3 ta ustun: ACCOUNT, NEXT CLAIM, BALANCE
-    rows = [[
-        cell(t(chat_id, "col_account"), header=True),
-        cell(t(chat_id, "col_next_claim"), header=True, align="center"),
-        cell(t(chat_id, "col_balance"), header=True, align="right"),
-    ]]
-
-    for crane in CRANES:
-        accounts = crane.get("accounts", [])
-        crane_timer = get_crane_timer(crane['name'])
-
-        if not accounts:
-            # Akkaunt yo'q - kran nomi va kran timeri
-            rows.append([
-                cell(f"{crane['emoji']} {crane['name']}".strip()),
-                cell(get_countdown(crane_timer), align="center"),
-                cell("0.000000", align="right"),
-            ])
-        else:
-            # Har bir akkaunt uchun alohida qator
-            for acc in accounts:
-                email = acc.get("email", "Unknown")
-                balance = acc.get("balance", 0.0)
-
-                # Akkaunt timeri
-                countdown = get_account_countdown(acc.get("next_claim_at"))
-
-                rows.append([
-                    cell(f"{crane['emoji']} {email}".strip()),
-                    cell(countdown, align="center"),
-                    cell(f"{balance:.6f}", align="right"),
-                ])
-
-    table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
-
     title_cell = [[RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "dashboard_title"), is_header=True)]]
     title_table = InputRichBlockTable(cells=title_cell, is_bordered=True, is_striped=True)
 
+    motivation_cell = [[RichBlockTableCell(align="center", valign="middle", text=t(chat_id, "motivation_text"), is_header=False)]]
+    motivation_table = InputRichBlockTable(cells=motivation_cell, is_bordered=True, is_striped=True)
+
     return InputRichMessage(blocks=[
         title_table,
-        table,
+        motivation_table,
     ])
 
 
