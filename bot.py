@@ -88,6 +88,7 @@ TEXTS = {
         "btn_cancel": "❌ Bekor qilish",
         "btn_api_key": "🔑 API Kalit",
         "btn_language": "🌐 Til",
+        "settings_id_label": "🆔 ID",
         "btn_support": "🆘 Yordam",
         "btn_main_menu": "🏠 Bosh menyu",
         "btn_back_to_crane": "◀️ {crane}ga qaytish",
@@ -143,6 +144,7 @@ TEXTS = {
         "btn_cancel": "❌ Бекор қилиш",
         "btn_api_key": "🔑 API Калит",
         "btn_language": "🌐 Тил",
+        "settings_id_label": "🆔 ID",
         "btn_support": "🆘 Ёрдам",
         "btn_main_menu": "🏠 Бош меню",
         "btn_back_to_crane": "◀️ {crane}га қайтиш",
@@ -374,10 +376,12 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
             [
                 cell(t(chat_id, "btn_api_key"), header=True, align="center"),
                 cell(t(chat_id, "btn_language"), header=True, align="center"),
+                cell(t(chat_id, "settings_id_label"), header=True, align="center"),
             ],
             [
                 cell(api_status, align="center"),
                 cell(lang_name, align="center"),
+                cell(str(chat_id), align="center"),
             ],
         ],
         is_bordered=True,
