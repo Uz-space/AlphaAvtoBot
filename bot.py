@@ -252,10 +252,12 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
     def cell(text: str, header: bool = False, align: str = "left", colspan: int | None = None) -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header, colspan=colspan)
 
-    # ALPHA - eng tepada, butun kenglikka yoyilgan (colspan=3)
-    alpha_row = [
-        cell(t(chat_id, "dashboard_title"), align="center", colspan=3),
-    ]
+    # ALPHA - alohida, mustaqil jadval
+    alpha_table = InputRichBlockTable(
+        cells=[[cell(t(chat_id, "dashboard_title"), header=True, align="center")]],
+        is_bordered=True,
+        is_striped=True,
+    )
 
     # Sarlavha qatori - 3 ustun: AKKAUNT / KEYINGI OLISH / BALANS
     header_row = [
@@ -286,19 +288,23 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
                     cell(f"{balance:.6f}", align="right"),
                 ])
 
-    # Motivatsion matn - pastda, butun kenglikka yoyilgan (colspan=3)
-    motivation_row = [
-        cell(t(chat_id, "motivation_text"), align="center", colspan=3),
-    ]
+    data_table = InputRichBlockTable(
+        cells=[header_row, *data_rows],
+        is_bordered=True,
+        is_striped=True,
+    )
 
-    main_table = InputRichBlockTable(
-        cells=[alpha_row, header_row, *data_rows, motivation_row],
+    # Motivatsion matn - alohida, mustaqil jadval
+    motivation_table = InputRichBlockTable(
+        cells=[[cell(t(chat_id, "motivation_text"), align="center")]],
         is_bordered=True,
         is_striped=True,
     )
 
     return InputRichMessage(blocks=[
-        main_table,
+        alpha_table,
+        data_table,
+        motivation_table,
     ])
 
 
