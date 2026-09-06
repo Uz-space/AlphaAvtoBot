@@ -63,8 +63,8 @@ class SettingsFSM(StatesGroup):
 USER_SETTINGS = {}  # chat_id -> {"api_key": str|None, "language": "uz_latin"|"uz_cyrillic"}
 
 LANGUAGES = {
-    "uz_latin": "🇺🇿 O'zbekcha",
-    "uz_cyrillic": "🇺🇿 Ўзбекча",
+    "uz_latin": "🇺🇿 O'zbekcha (lotin)",
+    "uz_cyrillic": "🇺🇿 Ўзбекча (кирилл)",
 }
 
 
@@ -86,7 +86,7 @@ TEXTS = {
         "btn_add_account": "➕ Akkaunt qo'shish",
         "btn_back": "◀️ Orqaga",
         "btn_cancel": "❌ Bekor qilish",
-        "btn_api_key": "🔑 API",
+        "btn_api_key": "🔑 API Kalit",
         "btn_language": "🌐 Til",
         "settings_id_label": "🆔 ID",
         "btn_support": "🆘 Yordam",
@@ -122,10 +122,10 @@ TEXTS = {
         "next_claim_in": "⏱️ Keyingi olish: 60:00",
 
         "settings_title": "⚙️ Sozlamalar",
-        "settings_api_key_line": "🔑 API: {status}",
+        "settings_api_key_line": "🔑 API Kalit: {status}",
         "settings_language_line": "🌐 Til: {lang}",
-        "api_key_set": "✅ Bor",
-        "api_key_not_set": "❌ Yoq",
+        "api_key_set": "✅ O'rnatilgan",
+        "api_key_not_set": "❌ O'rnatilmagan",
         "send_api_key": "🔑 API kalitingizni yuboring:",
         "api_key_saved": "✅ API Kalit saqlandi!",
         "choose_language": "🌐 Tilni tanlang:",
@@ -178,10 +178,10 @@ TEXTS = {
         "next_claim_in": "⏱️ Кейинги олиш: 60:00",
 
         "settings_title": "⚙️ Созламалар",
-        "settings_api_key_line": "🔑 API: {status}",
+        "settings_api_key_line": "🔑 API Калит: {status}",
         "settings_language_line": "🌐 Тил: {lang}",
-        "api_key_set": "✅ Бор",
-        "api_key_not_set": "❌ Йук",
+        "api_key_set": "✅ Ўрнатилган",
+        "api_key_not_set": "❌ Ўрнатилмаган",
         "send_api_key": "🔑 API калитингизни юборинг:",
         "api_key_saved": "✅ API Калит сақланди!",
         "choose_language": "🌐 Тилни танланг:",
@@ -359,9 +359,19 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
     def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
 
+    def short_word(text: str) -> str:
+        """Emoji/bayroqni olib tashlab, so'zning boshidagi 4 harfini qaytaradi."""
+        parts = text.split(" ", 1)
+        word = parts[1] if len(parts) > 1 else parts[0]
+        return word[:4]
+
     s = get_user_settings(chat_id)
-    api_status = t(chat_id, "api_key_set") if s.get("api_key") else t(chat_id, "api_key_not_set")
-    lang_name = LANGUAGES.get(s.get("language", "uz_latin"), s.get("language"))
+    raw_api_key = s.get("api_key")
+    api_status = raw_api_key[:4] if raw_api_key else "----"
+    lang_name_full = LANGUAGES.get(s.get("language", "uz_latin"), s.get("language"))
+
+    lang_name = short_word(lang_name_full)
+    short_id = str(chat_id % 10000).zfill(4)  # 0000 - 9999 oralig'ida
 
     # Sarlavha - alohida, mustaqil jadval (ALPHA uslubida)
     title_table = InputRichBlockTable(
@@ -370,7 +380,7 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Ma'lumotlar - alohida jadval: yorliq tepada, qiymat pastda
+    # Ma'lumotlar - alohida jadval: yorliq tepada, qiymat pastda (hammasi 4 belgi)
     info_table = InputRichBlockTable(
         cells=[
             [
@@ -381,7 +391,7 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
             [
                 cell(api_status, align="center"),
                 cell(lang_name, align="center"),
-                cell(str(chat_id), align="center"),
+                cell(short_id, align="center"),
             ],
         ],
         is_bordered=True,
