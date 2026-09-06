@@ -510,7 +510,7 @@ async def show_rich(chat_id: int, rich_message: InputRichMessage, reply_markup: 
     msg_id = active_messages.get(chat_id)
     if msg_id:
         try:
-            await bot.edit_message_rich(
+            await bot.edit_message_text(
                 chat_id=chat_id,
                 message_id=msg_id,
                 rich_message=rich_message,
@@ -565,7 +565,7 @@ async def auto_refresh():
                 if active_screen.get(chat_id) != "dashboard":
                     continue
                 try:
-                    await bot.edit_message_rich(
+                    await bot.edit_message_text(
                         chat_id=chat_id,
                         message_id=message_id,
                         rich_message=build_main_rich_message(chat_id),
