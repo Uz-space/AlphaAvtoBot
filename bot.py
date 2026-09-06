@@ -360,18 +360,18 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header)
 
     def short_word(text: str) -> str:
-        """Emoji/bayroqni olib tashlab, so'zning boshidagi 8 harfini qaytaradi."""
+        """Emoji/bayroqni olib tashlab, so'zning boshidagi 10 harfini qaytaradi."""
         parts = text.split(" ", 1)
         word = parts[1] if len(parts) > 1 else parts[0]
-        return word[:8]
+        return word[:10]
 
     s = get_user_settings(chat_id)
     raw_api_key = s.get("api_key")
-    api_status = raw_api_key[:8] if raw_api_key else "--------"
+    api_status = raw_api_key[:10] if raw_api_key else "----------"
     lang_name_full = LANGUAGES.get(s.get("language", "uz_latin"), s.get("language"))
 
     lang_name = short_word(lang_name_full)
-    short_id = str(chat_id % 100000000).zfill(8)  # 00000000 - 99999999 oralig'ida
+    short_id = str(chat_id % 10000000000).zfill(10)  # 0000000000 - 9999999999 oralig'ida
 
     # Sarlavha - alohida, mustaqil jadval (ALPHA uslubida)
     title_table = InputRichBlockTable(
