@@ -277,8 +277,8 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
                 cell(t(chat_id, "guide_header2"), header=True, align="center"),
             ],
             [
-                cell(t(chat_id, "guide_part1"), align="left"),
-                cell(t(chat_id, "guide_part2"), align="left"),
+                cell(t(chat_id, "guide_part1"), align="center"),
+                cell(t(chat_id, "guide_part2"), align="center"),
             ],
         ],
         is_bordered=True,
