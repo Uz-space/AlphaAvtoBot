@@ -106,7 +106,6 @@ TEXTS = {
         "plain_text_warning": "⚠️ Iltimos, oddiy matn yuboring, rasm/stiker/fayl emas.\n\n/cancel — bekor qilish uchun.",
 
         "crane_no_accounts": "Faol akkaunt yo'q - qo'shish uchun + bosing",
-        "crane_live_logs_heading": "📡 Jonli loglar",
         "crane_no_claims_yet": "⏳ Hali olishlar yo'q...",
 
         "stats_col_account": "🏷️ Akkaunt",
@@ -165,7 +164,6 @@ TEXTS = {
         "plain_text_warning": "⚠️ Илтимос, оддий матн юборинг, расм/стикер/файл эмас.\n\n/cancel — бекор қилиш учун.",
 
         "crane_no_accounts": "Фаол аккаунт йўқ - қўшиш учун + босинг",
-        "crane_live_logs_heading": "📡 Жонли логлар",
         "crane_no_claims_yet": "⏳ Ҳали олишлар йўқ...",
 
         "stats_col_account": "🏷️ Аккаунт",
@@ -419,7 +417,7 @@ def build_crane_keyboard(chat_id: int, crane_name: str) -> InlineKeyboardMarkup:
 
 
 def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
-    """Kran paneli - ALPHA jadvali, Statistika jadvali va jonli loglar"""
+    """Kran paneli - ALPHA jadvali va Statistika jadvali"""
     
     def cell(text: str, header: bool = False, align: str = "left", colspan: int | None = None) -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header, colspan=colspan)
@@ -479,15 +477,11 @@ def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
     )
     blocks.append(stats_table)
 
-    # Jonli loglar
-    blocks.append(InputRichBlockSectionHeading(text=t(chat_id, "crane_live_logs_heading"), size=4))
-    
+    # Jonli loglar - sarlavhasiz faqat log matni
     logs = crane.get("logs", [])
-    if not logs:
-        log_text = t(chat_id, "crane_no_claims_yet")
-    else:
+    if logs:
         log_text = "\n".join(f"[{e['time']}] {e['text']}" for e in logs[-8:])
-    blocks.append(InputRichBlockPreformatted(text=log_text))
+        blocks.append(InputRichBlockPreformatted(text=log_text))
 
     return InputRichMessage(blocks=blocks)
 
