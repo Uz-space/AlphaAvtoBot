@@ -79,11 +79,9 @@ TEXTS = {
         "guide_header1": "1",
         "guide_header2": "2",
         "guide_header3": "3",
-        "guide_header4": "4",
-        "guide_part1": "🔵 Tanla",
-        "guide_part2": "➕ Qo'sh",
-        "guide_part3": "⏳ Kut",
-        "guide_part4": "💰 Yig'im",
+        "guide_part1": "🔵 Tanlang",
+        "guide_part2": "➕ Qo'shing",
+        "guide_part3": "⏳ Kuting",
         "col_account": "Akkauntlar",
         "col_next_claim": "Keyingi olish",
         "col_balance": "Balanslari",
@@ -143,11 +141,9 @@ TEXTS = {
         "guide_header1": "1",
         "guide_header2": "2",
         "guide_header3": "3",
-        "guide_header4": "4",
-        "guide_part1": "🔵 Танла",
-        "guide_part2": "➕ Қўш",
-        "guide_part3": "⏳ Кут",
-        "guide_part4": "💰 Йиғим",
+        "guide_part1": "🔵 Танланг",
+        "guide_part2": "➕ Қўшинг",
+        "guide_part3": "⏳ Кутинг",
         "col_account": "Аккаунтлар",
         "col_next_claim": "Кейинги олиш",
         "col_balance": "Баланслари",
@@ -277,20 +273,18 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Qo'llanma - 4 ustunli jadval: botdan qanday foydalanish
+    # Qo'llanma - 3 ustunli jadval: botdan qanday foydalanish
     guide_table = InputRichBlockTable(
         cells=[
             [
                 cell(t(chat_id, "guide_header1"), header=True, align="center"),
                 cell(t(chat_id, "guide_header2"), header=True, align="center"),
                 cell(t(chat_id, "guide_header3"), header=True, align="center"),
-                cell(t(chat_id, "guide_header4"), header=True, align="center"),
             ],
             [
                 cell(t(chat_id, "guide_part1"), align="left"),
                 cell(t(chat_id, "guide_part2"), align="left"),
                 cell(t(chat_id, "guide_part3"), align="left"),
-                cell(t(chat_id, "guide_part4"), align="left"),
             ],
         ],
         is_bordered=True,
