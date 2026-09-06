@@ -79,9 +79,11 @@ TEXTS = {
         "motivation_header1": "MOTIVATSIYA 1",
         "motivation_header2": "MOTIVATSIYA 2",
         "motivation_header3": "MOTIVATSIYA 3",
-        "motivation_part1": "🚀 Har bir qadam katta yutuqqa boshlaydi",
-        "motivation_part2": "sabr va izchillik bilan davom eting",
-        "motivation_part3": "natija albatta keladi!",
+        "motivation_header4": "MOTIVATSIYA 4",
+        "motivation_part1": "🚀 Qadam",
+        "motivation_part2": "Sabr",
+        "motivation_part3": "Izchillik",
+        "motivation_part4": "Natija!",
         "col_account": "Akkauntlar",
         "col_next_claim": "Keyingi olish",
         "col_balance": "Balanslari",
@@ -141,9 +143,11 @@ TEXTS = {
         "motivation_header1": "МОТИВАЦИЯ 1",
         "motivation_header2": "МОТИВАЦИЯ 2",
         "motivation_header3": "МОТИВАЦИЯ 3",
-        "motivation_part1": "🚀 Ҳар бир қадам катта ютуққа бошлайди",
-        "motivation_part2": "сабр ва изчиллик билан давом этинг",
-        "motivation_part3": "натижа албатта келади!",
+        "motivation_header4": "МОТИВАЦИЯ 4",
+        "motivation_part1": "🚀 Қадам",
+        "motivation_part2": "Сабр",
+        "motivation_part3": "Изчиллик",
+        "motivation_part4": "Натижа!",
         "col_account": "Аккаунтлар",
         "col_next_claim": "Кейинги олиш",
         "col_balance": "Баланслари",
@@ -273,18 +277,20 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Motivatsiya - 3 ustunli jadval: MOTIVATSIYA 1 | MOTIVATSIYA 2 | MOTIVATSIYA 3
+    # Motivatsiya - 4 ustunli jadval: MOTIVATSIYA 1-4
     motivation_table = InputRichBlockTable(
         cells=[
             [
                 cell(t(chat_id, "motivation_header1"), header=True, align="center"),
                 cell(t(chat_id, "motivation_header2"), header=True, align="center"),
                 cell(t(chat_id, "motivation_header3"), header=True, align="center"),
+                cell(t(chat_id, "motivation_header4"), header=True, align="center"),
             ],
             [
                 cell(t(chat_id, "motivation_part1"), align="left"),
                 cell(t(chat_id, "motivation_part2"), align="left"),
                 cell(t(chat_id, "motivation_part3"), align="left"),
+                cell(t(chat_id, "motivation_part4"), align="left"),
             ],
         ],
         is_bordered=True,
