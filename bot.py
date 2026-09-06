@@ -77,8 +77,10 @@ TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
         "guide_header1": "1",
+        "guide_header_mid": "•",
         "guide_header2": "2",
         "guide_part1": "🔵🔵🔵🔵",
+        "guide_part_mid": "⚪",
         "guide_part2": "🔴🔴🔴🔴",
         "col_account": "Akkauntlar",
         "col_next_claim": "Keyingi olish",
@@ -137,8 +139,10 @@ TEXTS = {
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
         "guide_header1": "1",
+        "guide_header_mid": "•",
         "guide_header2": "2",
         "guide_part1": "🔵🔵🔵🔵",
+        "guide_part_mid": "⚪",
         "guide_part2": "🔴🔴🔴🔴",
         "col_account": "Аккаунтлар",
         "col_next_claim": "Кейинги олиш",
@@ -274,10 +278,12 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         cells=[
             [
                 cell(t(chat_id, "guide_header1"), header=True, align="center"),
+                cell(t(chat_id, "guide_header_mid"), header=True, align="center"),
                 cell(t(chat_id, "guide_header2"), header=True, align="center"),
             ],
             [
                 cell(t(chat_id, "guide_part1"), align="center"),
+                cell(t(chat_id, "guide_part_mid"), align="center"),
                 cell(t(chat_id, "guide_part2"), align="center"),
             ],
         ],
