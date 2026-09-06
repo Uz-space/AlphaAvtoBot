@@ -215,8 +215,9 @@ def get_crane(name: str):
 
 
 def cancel_keyboard(chat_id: int):
+    """Bekor qilish tugmasi - QIZIL (DANGER)"""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add")]
+        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add", style=ButtonStyle.DANGER)]
     ])
 
 
@@ -407,8 +408,9 @@ def build_language_keyboard(chat_id: int) -> InlineKeyboardMarkup:
 
 
 def settings_cancel_keyboard(chat_id: int) -> InlineKeyboardMarkup:
+    """Settings bekor qilish tugmasi - QIZIL (DANGER)"""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_settings")]
+        [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_settings", style=ButtonStyle.DANGER)]
     ])
 
 
