@@ -269,7 +269,7 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
     motivation_table = InputRichBlockTable(
         cells=[
             [cell(t(chat_id, "motivation_label"), header=True, align="center")],
-            [cell(t(chat_id, "motivation_text"), align="center")],
+            [cell(t(chat_id, "motivation_text"), align="left")],
         ],
         is_bordered=True,
         is_striped=True,
