@@ -109,9 +109,9 @@ TEXTS = {
         "crane_live_logs_heading": "📡 Jonli loglar",
         "crane_no_claims_yet": "⏳ Hali olishlar yo'q...",
 
-        "stats_col_account": "Akkaunt",
-        "stats_col_next_claim": "Keyingi olish",
-        "stats_col_balance": "Balans",
+        "stats_col_account": "🏷️ Akkaunt",
+        "stats_col_next_claim": "⏱️ Keyingi olish",
+        "stats_col_balance": "💰 Balans",
 
         "add_account_title": "{emoji} Akkaunt qo'shish - {crane}",
         "field_label": "Belgi: {label}",
@@ -168,9 +168,9 @@ TEXTS = {
         "crane_live_logs_heading": "📡 Жонли логлар",
         "crane_no_claims_yet": "⏳ Ҳали олишлар йўқ...",
 
-        "stats_col_account": "Аккаунт",
-        "stats_col_next_claim": "Кейинги олиш",
-        "stats_col_balance": "Баланс",
+        "stats_col_account": "🏷️ Аккаунт",
+        "stats_col_next_claim": "⏱️ Кейинги олиш",
+        "stats_col_balance": "💰 Баланс",
 
         "add_account_title": "{emoji} Аккаунт қўшиш - {crane}",
         "field_label": "Белги: {label}",
@@ -418,44 +418,8 @@ def build_crane_keyboard(chat_id: int, crane_name: str) -> InlineKeyboardMarkup:
     ])
 
 
-def build_trx_stats_text(chat_id: int, crane: dict) -> str:
-    accounts = crane.get("accounts", [])
-
-    col_account = t(chat_id, "stats_col_account")
-    col_next = t(chat_id, "stats_col_next_claim")
-    col_balance = t(chat_id, "stats_col_balance")
-
-    lines = []
-    lines.append(f"{col_account:<15} {col_next:<12} {col_balance:<15}")
-    lines.append("-" * 42)
-
-    if not accounts:
-        # Akkaunt yo'q - kran timeri
-        crane_timer = get_crane_timer(crane['name'])
-        lines.append(f"{crane['name']:<15} {get_countdown(crane_timer):<12} {'0.000000':<15}")
-    else:
-        for acc in accounts:
-            email = acc.get("email", "Unknown")[:15]
-            balance = acc.get("balance", 0.0)
-
-            countdown = get_account_countdown(acc.get("next_claim_at"))
-
-            lines.append(f"{email:<15} {countdown:<12} {balance:<15.6f}")
-
-    return "\n".join(lines)
-
-
-def build_live_logs_rich_block(chat_id: int, crane: dict) -> InputRichBlockPreformatted:
-    logs = crane.get("logs", [])
-    if not logs:
-        body = t(chat_id, "crane_no_claims_yet")
-    else:
-        body = "\n".join(f"[{e['time']}] {e['text']}" for e in logs[-8:])
-    return InputRichBlockPreformatted(text=body)
-
-
 def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
-    """Kran paneli - ALPHA jadvali, Statistika sarlavhasi va jonli loglar"""
+    """Kran paneli - ALPHA jadvali, Statistika jadvali va jonli loglar"""
     
     def cell(text: str, header: bool = False, align: str = "left", colspan: int | None = None) -> RichBlockTableCell:
         return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header, colspan=colspan)
@@ -470,13 +434,60 @@ def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
     )
     blocks.append(alpha_table)
     
-    # Statistika jadvali
-    stats_text = build_trx_stats_text(chat_id, crane)
-    blocks.append(InputRichBlockPreformatted(text=stats_text))
+    # Statistika jadvali - emojili sarlavhalar bilan
+    accounts = crane.get("accounts", [])
+    
+    # Sarlavha qatori - emojilar bilan
+    header_row = [
+        cell(t(chat_id, "stats_col_account"), header=True, align="left"),
+        cell(t(chat_id, "stats_col_next_claim"), header=True, align="center"),
+        cell(t(chat_id, "stats_col_balance"), header=True, align="right"),
+    ]
+    
+    # Ma'lumotlar qatorlari
+    data_rows = []
+    
+    if not accounts:
+        # Akkaunt yo'q - kran timeri
+        crane_timer = get_crane_timer(crane['name'])
+        countdown = get_countdown(crane_timer)
+        data_rows.append([
+            cell(crane['name'], align="left"),
+            cell(countdown, align="center"),
+            cell("0.000000", align="right"),
+        ])
+    else:
+        for acc in accounts:
+            email = acc.get("email", "Unknown")[:15]
+            balance = acc.get("balance", 0.0)
+            countdown = get_account_countdown(acc.get("next_claim_at"))
+            
+            # Akkaunt uchun emoji holatiga qarab
+            status_emoji = "🟢" if acc.get("active", False) else "🔴"
+            
+            data_rows.append([
+                cell(f"{status_emoji} {email}", align="left"),
+                cell(countdown, align="center"),
+                cell(f"{balance:.6f}", align="right"),
+            ])
+    
+    # Jadvalni qurish
+    stats_table = InputRichBlockTable(
+        cells=[header_row] + data_rows,
+        is_bordered=True,
+        is_striped=True,
+    )
+    blocks.append(stats_table)
 
     # Jonli loglar
     blocks.append(InputRichBlockSectionHeading(text=t(chat_id, "crane_live_logs_heading"), size=4))
-    blocks.append(build_live_logs_rich_block(chat_id, crane))
+    
+    logs = crane.get("logs", [])
+    if not logs:
+        log_text = t(chat_id, "crane_no_claims_yet")
+    else:
+        log_text = "\n".join(f"[{e['time']}] {e['text']}" for e in logs[-8:])
+    blocks.append(InputRichBlockPreformatted(text=log_text))
 
     return InputRichMessage(blocks=blocks)
 
