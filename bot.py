@@ -77,7 +77,7 @@ TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
         "guide_header1": "1",
-        "guide_header_mid": "VIP",
+        "guide_header_mid": "",
         "guide_header2": "2",
         "guide_part1": "🔵🔵🔵🔵",
         "guide_part_mid": "",
@@ -139,7 +139,7 @@ TEXTS = {
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
         "guide_header1": "1",
-        "guide_header_mid": "ВИП",
+        "guide_header_mid": "",
         "guide_header2": "2",
         "guide_part1": "🔵🔵🔵🔵",
         "guide_part_mid": "",
