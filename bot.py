@@ -76,8 +76,10 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
-        "motivation_label": "💡 Motivatsiya",
-        "motivation_text": "🚀 Har bir qadam katta yutuqqa boshlaydi — sabr va izchillik bilan davom eting, natija albatta keladi!",
+        "motivation_header1": "MOTIVATSIYA 1",
+        "motivation_header2": "MOTIVATSIYA 2",
+        "motivation_part1": "🚀 Har bir qadam katta yutuqqa boshlaydi",
+        "motivation_part2": "sabr va izchillik bilan davom eting, natija albatta keladi!",
         "col_account": "Akkauntlar",
         "col_next_claim": "Keyingi olish",
         "col_balance": "Balanslari",
@@ -134,8 +136,10 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
-        "motivation_label": "💡 Мотивация",
-        "motivation_text": "🚀 Ҳар бир қадам катта ютуққа бошлайди — сабр ва изчиллик билан давом этинг, натижа албатта келади!",
+        "motivation_header1": "МОТИВАЦИЯ 1",
+        "motivation_header2": "МОТИВАЦИЯ 2",
+        "motivation_part1": "🚀 Ҳар бир қадам катта ютуққа бошлайди",
+        "motivation_part2": "сабр ва изчиллик билан давом этинг, натижа албатта келади!",
         "col_account": "Аккаунтлар",
         "col_next_claim": "Кейинги олиш",
         "col_balance": "Баланслари",
@@ -265,11 +269,17 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Motivatsiya - 1 ustunli jadval: tepasida sarlavha, pastida matn
+    # Motivatsiya - 2 ustunli jadval: MOTIVATSIYA 1 | MOTIVATSIYA 2
     motivation_table = InputRichBlockTable(
         cells=[
-            [cell(t(chat_id, "motivation_label"), header=True, align="center")],
-            [cell(t(chat_id, "motivation_text"), align="left")],
+            [
+                cell(t(chat_id, "motivation_header1"), header=True, align="center"),
+                cell(t(chat_id, "motivation_header2"), header=True, align="center"),
+            ],
+            [
+                cell(t(chat_id, "motivation_part1"), align="left"),
+                cell(t(chat_id, "motivation_part2"), align="left"),
+            ],
         ],
         is_bordered=True,
         is_striped=True,
