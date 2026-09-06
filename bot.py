@@ -461,28 +461,11 @@ def build_live_logs_rich_block(chat_id: int, crane: dict) -> InputRichBlockPrefo
 
 
 def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
-    accounts = crane.get("accounts", [])
-    acc_count = len(accounts)
-    active_count = sum(1 for a in accounts if a.get("active", False))
-
+    """Kran paneli - faqat TRX statistikasi va jonli loglar"""
     blocks = [
-        InputRichBlockParagraph(text=[RichTextBold(text=t(chat_id, "crane_control_panel", emoji=crane['emoji'], name=crane['name']).strip())]),
-        InputRichBlockParagraph(text=t(chat_id, "crane_claims_balance", claims=crane['claims'], balance=crane['balance'])),
-        InputRichBlockSectionHeading(text=t(chat_id, "crane_active_accounts", active=active_count, total=acc_count), size=4),
+        InputRichBlockSectionHeading(text=t(chat_id, "crane_trx_stats_heading"), size=4),
     ]
-
-    if accounts:
-        items = []
-        for acc in accounts:
-            status = "🟢" if acc.get("active") else "🔴"
-            items.append(InputRichBlockListItem(blocks=[
-                InputRichBlockParagraph(text=f"{status} {acc['label']} - {acc['email']}")
-            ]))
-        blocks.append(InputRichBlockList(items=items))
-    else:
-        blocks.append(InputRichBlockParagraph(text=t(chat_id, "crane_no_accounts")))
-
-    blocks.append(InputRichBlockSectionHeading(text=t(chat_id, "crane_trx_stats_heading"), size=4))
+    
     stats_text = build_trx_stats_text(chat_id, crane)
     blocks.append(InputRichBlockPreformatted(text=stats_text))
 
