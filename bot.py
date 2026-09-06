@@ -76,6 +76,7 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
+        "statistics_title": "Statistika",
         "guide_header1": "1",
         "guide_header_mid": "",
         "guide_header2": "2",
@@ -104,11 +105,7 @@ TEXTS = {
         "cancelled": "❌ Bekor qilindi.",
         "plain_text_warning": "⚠️ Iltimos, oddiy matn yuboring, rasm/stiker/fayl emas.\n\n/cancel — bekor qilish uchun.",
 
-        "crane_control_panel": "{emoji} {name} - Boshqaruv paneli",
-        "crane_claims_balance": "📊 {claims} ta olish | 💰 {balance}",
-        "crane_active_accounts": "Faol akkauntlar ({active}/{total})",
         "crane_no_accounts": "Faol akkaunt yo'q - qo'shish uchun + bosing",
-        "crane_trx_stats_heading": "📊 TRX Statistikasi",
         "crane_live_logs_heading": "📡 Jonli loglar",
         "crane_no_claims_yet": "⏳ Hali olishlar yo'q...",
 
@@ -138,6 +135,7 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
+        "statistics_title": "Статистика",
         "guide_header1": "1",
         "guide_header_mid": "",
         "guide_header2": "2",
@@ -166,11 +164,7 @@ TEXTS = {
         "cancelled": "❌ Бекор қилинди.",
         "plain_text_warning": "⚠️ Илтимос, оддий матн юборинг, расм/стикер/файл эмас.\n\n/cancel — бекор қилиш учун.",
 
-        "crane_control_panel": "{emoji} {name} - Бошқарув панели",
-        "crane_claims_balance": "📊 {claims} та олиш | 💰 {balance}",
-        "crane_active_accounts": "Фаол аккаунтлар ({active}/{total})",
         "crane_no_accounts": "Фаол аккаунт йўқ - қўшиш учун + босинг",
-        "crane_trx_stats_heading": "📊 TRX Статистикаси",
         "crane_live_logs_heading": "📡 Жонли логлар",
         "crane_no_claims_yet": "⏳ Ҳали олишлар йўқ...",
 
@@ -461,14 +455,26 @@ def build_live_logs_rich_block(chat_id: int, crane: dict) -> InputRichBlockPrefo
 
 
 def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
-    """Kran paneli - faqat TRX statistikasi va jonli loglar"""
-    blocks = [
-        InputRichBlockSectionHeading(text=t(chat_id, "crane_trx_stats_heading"), size=4),
-    ]
+    """Kran paneli - ALPHA jadvali, Statistika sarlavhasi va jonli loglar"""
     
+    def cell(text: str, header: bool = False, align: str = "left", colspan: int | None = None) -> RichBlockTableCell:
+        return RichBlockTableCell(align=align, valign="middle", text=text, is_header=header, colspan=colspan)
+    
+    blocks = []
+    
+    # ALPHA jadvali (dashboarddagidek)
+    alpha_table = InputRichBlockTable(
+        cells=[[cell(t(chat_id, "statistics_title"), header=True, align="center")]],
+        is_bordered=True,
+        is_striped=True,
+    )
+    blocks.append(alpha_table)
+    
+    # Statistika jadvali
     stats_text = build_trx_stats_text(chat_id, crane)
     blocks.append(InputRichBlockPreformatted(text=stats_text))
 
+    # Jonli loglar
     blocks.append(InputRichBlockSectionHeading(text=t(chat_id, "crane_live_logs_heading"), size=4))
     blocks.append(build_live_logs_rich_block(chat_id, crane))
 
