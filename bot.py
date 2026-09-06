@@ -500,20 +500,71 @@ def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# ─── Xabarlarni saqlash uchun ──────────────────────────────────────────────
-main_messages = {}  # chat_id -> message_id
+# ─── Har bir chat uchun YAGONA faol xabar (doim shu xabar edit qilinadi) ────
+active_messages = {}  # chat_id -> message_id
+active_screen = {}    # chat_id -> "dashboard" | boshqa ekran nomi (auto-refresh faqat "dashboard" uchun ishlaydi)
+
+
+async def show_rich(chat_id: int, rich_message: InputRichMessage, reply_markup: InlineKeyboardMarkup | None = None):
+    """Chat uchun yagona faol xabarni RICH formatda yangilaydi; bo'lmasa yangi yuboradi."""
+    msg_id = active_messages.get(chat_id)
+    if msg_id:
+        try:
+            await bot.edit_message_rich(
+                chat_id=chat_id,
+                message_id=msg_id,
+                rich_message=rich_message,
+                reply_markup=reply_markup,
+            )
+            return
+        except Exception:
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            except Exception:
+                pass
+    msg = await bot.send_rich_message(chat_id=chat_id, rich_message=rich_message, reply_markup=reply_markup)
+    active_messages[chat_id] = msg.message_id
+
+
+async def show_text(chat_id: int, text: str, reply_markup: InlineKeyboardMarkup | None = None):
+    """Chat uchun yagona faol xabarni ODDIY MATN formatda yangilaydi; bo'lmasa yangi yuboradi."""
+    msg_id = active_messages.get(chat_id)
+    if msg_id:
+        try:
+            await bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=msg_id,
+                text=text,
+                reply_markup=reply_markup,
+            )
+            return
+        except Exception:
+            try:
+                await bot.delete_message(chat_id=chat_id, message_id=msg_id)
+            except Exception:
+                pass
+    msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+    active_messages[chat_id] = msg.message_id
+
+
+async def delete_silently(message: Message):
+    """Foydalanuvchi xabarini (masalan parol/email) chatni toza saqlash uchun o'chiradi."""
+    try:
+        await message.delete()
+    except Exception:
+        pass
 
 
 # ─── Auto refresh timer ─────────────────────────────────────────────────────
 async def auto_refresh():
-    """Har 1 sekundda avtomatik yangilaydi"""
+    """Har 1 sekundda avtomatik yangilaydi (faqat dashboard ochiq bo'lgan chatlarda ishlaydi)"""
     while True:
         await asyncio.sleep(1)
         try:
-            # Barcha active xabarlarni yangilash
-            for chat_id, message_id in list(main_messages.items()):
+            for chat_id, message_id in list(active_messages.items()):
+                if active_screen.get(chat_id) != "dashboard":
+                    continue
                 try:
-                    # Rich message ni edit qilish
                     await bot.edit_message_rich(
                         chat_id=chat_id,
                         message_id=message_id,
@@ -521,10 +572,7 @@ async def auto_refresh():
                         reply_markup=build_keyboard(chat_id)
                     )
                 except Exception as e:
-                    # Agar xabar o'chirilgan bo'lsa, ro'yxatdan o'chiramiz
-                    if "message to edit not found" in str(e) or "message is not modified" in str(e):
-                        if chat_id in main_messages:
-                            del main_messages[chat_id]
+                    # Xabar o'chirilgan yoki topilmagan bo'lishi mumkin - buni e'tiborsiz qoldiramiz
                     pass
         except Exception as e:
             logging.error(f"Auto refresh error: {e}")
@@ -534,12 +582,10 @@ async def auto_refresh():
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
-    msg = await message.answer_rich(
-        rich_message=build_main_rich_message(message.chat.id),
-        reply_markup=build_keyboard(message.chat.id)
-    )
-    # Xabarni ro'yxatga qo'shamiz
-    main_messages[message.chat.id] = msg.message_id
+    chat_id = message.chat.id
+    await delete_silently(message)
+    active_screen[chat_id] = "dashboard"
+    await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
 
 
 # ─── /cancel ─────────────────────────────────────────────────────────────────
@@ -549,52 +595,38 @@ async def cmd_cancel(message: Message, state: FSMContext):
     data = await state.get_data()
     crane_name = data.get("crane_name", "")
     await state.clear()
-    await message.answer(t(message.chat.id, "cancelled"))
+    chat_id = message.chat.id
+    await delete_silently(message)
+
     if current_state and current_state.startswith("SettingsFSM"):
-        await message.answer_rich(
-            rich_message=build_settings_rich_message(message.chat.id),
-            reply_markup=build_settings_keyboard(message.chat.id),
-        )
-    elif crane_name:
+        active_screen[chat_id] = "settings"
+        await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
+    elif crane_name and get_crane(crane_name):
         crane = get_crane(crane_name)
-        if crane:
-            await message.answer_rich(
-                rich_message=build_crane_rich_message(message.chat.id, crane),
-                reply_markup=build_crane_keyboard(message.chat.id, crane_name),
-            )
+        active_screen[chat_id] = f"crane:{crane_name}"
+        await show_rich(chat_id, build_crane_rich_message(chat_id, crane), build_crane_keyboard(chat_id, crane_name))
+    else:
+        active_screen[chat_id] = "dashboard"
+        await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
 
 
 # ─── Refresh ─────────────────────────────────────────────────────────────────
 @dp.callback_query(F.data == "refresh")
 async def cb_refresh(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    try:
-        await call.message.delete()
-    except:
-        pass
-    msg = await call.message.answer_rich(
-        rich_message=build_main_rich_message(call.message.chat.id),
-        reply_markup=build_keyboard(call.message.chat.id)
-    )
-    # Xabarni ro'yxatga yangilaymiz
-    main_messages[call.message.chat.id] = msg.message_id
-    await call.answer(t(call.message.chat.id, "updated"))
+    chat_id = call.message.chat.id
+    active_screen[chat_id] = "dashboard"
+    await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
+    await call.answer(t(chat_id, "updated"))
 
 
 # ─── Back to main ────────────────────────────────────────────────────────────
 @dp.callback_query(F.data == "back_main")
 async def cb_back_main(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    try:
-        await call.message.delete()
-    except:
-        pass
-    msg = await call.message.answer_rich(
-        rich_message=build_main_rich_message(call.message.chat.id),
-        reply_markup=build_keyboard(call.message.chat.id)
-    )
-    # Xabarni ro'yxatga yangilaymiz
-    main_messages[call.message.chat.id] = msg.message_id
+    chat_id = call.message.chat.id
+    active_screen[chat_id] = "dashboard"
+    await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
     await call.answer()
 
 
@@ -603,17 +635,12 @@ async def cb_back_main(call: CallbackQuery, state: FSMContext):
 async def cb_crane(call: CallbackQuery, state: FSMContext):
     crane_name = call.data.replace("crane_", "")
     crane = get_crane(crane_name)
+    chat_id = call.message.chat.id
     if not crane:
-        await call.answer(t(call.message.chat.id, "not_found"), show_alert=True)
+        await call.answer(t(chat_id, "not_found"), show_alert=True)
         return
-    await call.message.delete()
-    # Crane panelga o'tganda main xabarni ro'yxatdan o'chiramiz
-    if call.message.chat.id in main_messages:
-        del main_messages[call.message.chat.id]
-    await call.message.answer_rich(
-        rich_message=build_crane_rich_message(call.message.chat.id, crane),
-        reply_markup=build_crane_keyboard(call.message.chat.id, crane_name),
-    )
+    active_screen[chat_id] = f"crane:{crane_name}"
+    await show_rich(chat_id, build_crane_rich_message(chat_id, crane), build_crane_keyboard(chat_id, crane_name))
     await call.answer()
 
 
@@ -622,8 +649,9 @@ async def cb_crane(call: CallbackQuery, state: FSMContext):
 async def cb_add_account(call: CallbackQuery, state: FSMContext):
     crane_name = call.data.replace("add_account_", "")
     crane = get_crane(crane_name)
+    chat_id = call.message.chat.id
     if not crane:
-        await call.answer(t(call.message.chat.id, "not_found"), show_alert=True)
+        await call.answer(t(chat_id, "not_found"), show_alert=True)
         return
 
     acc_num = len(crane["accounts"]) + 1
@@ -631,18 +659,15 @@ async def cb_add_account(call: CallbackQuery, state: FSMContext):
 
     await state.set_state(AddAccount.email)
     await state.update_data(crane_name=crane_name, label=label)
+    active_screen[chat_id] = "add_account"
 
-    chat_id = call.message.chat.id
-    await call.message.delete()
-    await call.message.answer(
-        text=(
-            f"{t(chat_id, 'add_account_title', emoji=crane['emoji'], crane=crane_name).strip()}\n\n"
-            f"{t(chat_id, 'field_label', label=label)}\n\n"
-            f"{t(chat_id, 'add_account_send_email')}\n\n"
-            f"{t(chat_id, 'cancel_hint')}"
-        ),
-        reply_markup=cancel_keyboard(chat_id),
+    text = (
+        f"{t(chat_id, 'add_account_title', emoji=crane['emoji'], crane=crane_name).strip()}\n\n"
+        f"{t(chat_id, 'field_label', label=label)}\n\n"
+        f"{t(chat_id, 'add_account_send_email')}\n\n"
+        f"{t(chat_id, 'cancel_hint')}"
     )
+    await show_text(chat_id, text, cancel_keyboard(chat_id))
     await call.answer()
 
 
@@ -656,14 +681,14 @@ async def fsm_email(message: Message, state: FSMContext):
     await state.set_state(AddAccount.password)
 
     chat_id = message.chat.id
-    await message.answer(
-        text=(
-            f"{t(chat_id, 'email_line', email=email)}\n\n"
-            f"{t(chat_id, 'send_password')}\n\n"
-            f"{t(chat_id, 'cancel_hint')}"
-        ),
-        reply_markup=cancel_keyboard(chat_id),
+    await delete_silently(message)
+
+    text = (
+        f"{t(chat_id, 'email_line', email=email)}\n\n"
+        f"{t(chat_id, 'send_password')}\n\n"
+        f"{t(chat_id, 'cancel_hint')}"
     )
+    await show_text(chat_id, text, cancel_keyboard(chat_id))
 
 
 # ─── Add Account: Step 2 tugagach — yakunlash ────────────────────────────────
@@ -673,11 +698,12 @@ async def fsm_password(message: Message, state: FSMContext):
     if password is None:
         return
     await state.update_data(password=password)
-    await _finish_add_account(message, state, via_callback=False)
+    await delete_silently(message)
+    await _finish_add_account(message, state)
 
 
 # ─── Finish: Account qo'shish ────────────────────────────────────────────────
-async def _finish_add_account(message: Message, state: FSMContext, via_callback: bool):
+async def _finish_add_account(message: Message, state: FSMContext):
     data = await state.get_data()
     crane_name = data["crane_name"]
     label = data["label"]
@@ -723,7 +749,8 @@ async def _finish_add_account(message: Message, state: FSMContext, via_callback:
     ])
 
     await state.clear()
-    await message.answer(text=summary, reply_markup=keyboard)
+    active_screen[chat_id] = "account_added"
+    await show_text(chat_id, summary, keyboard)
 
 
 # ─── Cancel callback ─────────────────────────────────────────────────────────
@@ -736,18 +763,11 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
     chat_id = call.message.chat.id
     crane = get_crane(crane_name)
     if crane:
-        await call.message.delete()
-        await call.message.answer_rich(
-            rich_message=build_crane_rich_message(chat_id, crane),
-            reply_markup=build_crane_keyboard(chat_id, crane_name),
-        )
+        active_screen[chat_id] = f"crane:{crane_name}"
+        await show_rich(chat_id, build_crane_rich_message(chat_id, crane), build_crane_keyboard(chat_id, crane_name))
     else:
-        await call.message.delete()
-        msg = await call.message.answer_rich(
-            rich_message=build_main_rich_message(chat_id),
-            reply_markup=build_keyboard(chat_id)
-        )
-        main_messages[chat_id] = msg.message_id
+        active_screen[chat_id] = "dashboard"
+        await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
     await call.answer(t(chat_id, "cancelled"))
 
 
@@ -755,16 +775,9 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "settings")
 async def cb_settings(call: CallbackQuery, state: FSMContext):
     await state.clear()
-    try:
-        await call.message.delete()
-    except:
-        pass
-    if call.message.chat.id in main_messages:
-        del main_messages[call.message.chat.id]
-    await call.message.answer_rich(
-        rich_message=build_settings_rich_message(call.message.chat.id),
-        reply_markup=build_settings_keyboard(call.message.chat.id),
-    )
+    chat_id = call.message.chat.id
+    active_screen[chat_id] = "settings"
+    await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await call.answer()
 
 
@@ -773,14 +786,9 @@ async def cb_settings(call: CallbackQuery, state: FSMContext):
 async def cb_settings_api_key(call: CallbackQuery, state: FSMContext):
     await state.set_state(SettingsFSM.api_key)
     chat_id = call.message.chat.id
-    await call.message.delete()
-    await call.message.answer(
-        text=(
-            f"{t(chat_id, 'send_api_key')}\n\n"
-            f"{t(chat_id, 'cancel_hint')}"
-        ),
-        reply_markup=settings_cancel_keyboard(chat_id),
-    )
+    active_screen[chat_id] = "settings_api_key"
+    text = f"{t(chat_id, 'send_api_key')}\n\n{t(chat_id, 'cancel_hint')}"
+    await show_text(chat_id, text, settings_cancel_keyboard(chat_id))
     await call.answer()
 
 
@@ -793,20 +801,17 @@ async def fsm_api_key(message: Message, state: FSMContext):
     settings["api_key"] = api_key
     await state.clear()
     chat_id = message.chat.id
-    await message.answer_rich(
-        rich_message=build_settings_rich_message(chat_id),
-        reply_markup=build_settings_keyboard(chat_id),
-    )
+    await delete_silently(message)
+    active_screen[chat_id] = "settings"
+    await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
 
 
 # ─── Settings: Language tanlash ──────────────────────────────────────────────
 @dp.callback_query(F.data == "settings_language")
 async def cb_settings_language(call: CallbackQuery):
     chat_id = call.message.chat.id
-    await call.message.edit_text(
-        text=t(chat_id, "choose_language"),
-        reply_markup=build_language_keyboard(chat_id),
-    )
+    active_screen[chat_id] = "settings_language"
+    await show_text(chat_id, t(chat_id, "choose_language"), build_language_keyboard(chat_id))
     await call.answer()
 
 
@@ -819,11 +824,8 @@ async def cb_lang_select(call: CallbackQuery):
         return
     settings = get_user_settings(chat_id)
     settings["language"] = code
-    await call.message.delete()
-    await call.message.answer_rich(
-        rich_message=build_settings_rich_message(chat_id),
-        reply_markup=build_settings_keyboard(chat_id),
-    )
+    active_screen[chat_id] = "settings"
+    await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await call.answer(f"✅ {LANGUAGES[code]}")
 
 
@@ -832,11 +834,8 @@ async def cb_lang_select(call: CallbackQuery):
 async def cb_cancel_settings(call: CallbackQuery, state: FSMContext):
     await state.clear()
     chat_id = call.message.chat.id
-    await call.message.delete()
-    await call.message.answer_rich(
-        rich_message=build_settings_rich_message(chat_id),
-        reply_markup=build_settings_keyboard(chat_id),
-    )
+    active_screen[chat_id] = "settings"
+    await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await call.answer(t(chat_id, "cancelled"))
 
 
