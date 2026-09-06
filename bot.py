@@ -76,14 +76,14 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
-        "motivation_header1": "MOTIV 1",
-        "motivation_header2": "MOTIV 2",
-        "motivation_header3": "MOTIV 3",
-        "motivation_header4": "MOTIV 4",
-        "motivation_part1": "🚀 Qadam",
-        "motivation_part2": "Sabr",
-        "motivation_part3": "Izchillik",
-        "motivation_part4": "Natija!",
+        "guide_header1": "1-QADAM",
+        "guide_header2": "2-QADAM",
+        "guide_header3": "3-QADAM",
+        "guide_header4": "4-QADAM",
+        "guide_part1": "🔵 Kran tanlang",
+        "guide_part2": "➕ Akkaunt qo'shing",
+        "guide_part3": "⏳ 60 daqiqa kuting",
+        "guide_part4": "💰 Avtomatik yig'iladi",
         "col_account": "Akkauntlar",
         "col_next_claim": "Keyingi olish",
         "col_balance": "Balanslari",
@@ -140,14 +140,14 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
-        "motivation_header1": "МОТИВ 1",
-        "motivation_header2": "МОТИВ 2",
-        "motivation_header3": "МОТИВ 3",
-        "motivation_header4": "МОТИВ 4",
-        "motivation_part1": "🚀 Қадам",
-        "motivation_part2": "Сабр",
-        "motivation_part3": "Изчиллик",
-        "motivation_part4": "Натижа!",
+        "guide_header1": "1-ҚАДАМ",
+        "guide_header2": "2-ҚАДАМ",
+        "guide_header3": "3-ҚАДАМ",
+        "guide_header4": "4-ҚАДАМ",
+        "guide_part1": "🔵 Кран танланг",
+        "guide_part2": "➕ Аккаунт қўшинг",
+        "guide_part3": "⏳ 60 дақиқа кутинг",
+        "guide_part4": "💰 Автоматик йиғилади",
         "col_account": "Аккаунтлар",
         "col_next_claim": "Кейинги олиш",
         "col_balance": "Баланслари",
@@ -277,20 +277,20 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Motivatsiya - 4 ustunli jadval: MOTIVATSIYA 1-4
-    motivation_table = InputRichBlockTable(
+    # Qo'llanma - 4 ustunli jadval: botdan qanday foydalanish
+    guide_table = InputRichBlockTable(
         cells=[
             [
-                cell(t(chat_id, "motivation_header1"), header=True, align="center"),
-                cell(t(chat_id, "motivation_header2"), header=True, align="center"),
-                cell(t(chat_id, "motivation_header3"), header=True, align="center"),
-                cell(t(chat_id, "motivation_header4"), header=True, align="center"),
+                cell(t(chat_id, "guide_header1"), header=True, align="center"),
+                cell(t(chat_id, "guide_header2"), header=True, align="center"),
+                cell(t(chat_id, "guide_header3"), header=True, align="center"),
+                cell(t(chat_id, "guide_header4"), header=True, align="center"),
             ],
             [
-                cell(t(chat_id, "motivation_part1"), align="left"),
-                cell(t(chat_id, "motivation_part2"), align="left"),
-                cell(t(chat_id, "motivation_part3"), align="left"),
-                cell(t(chat_id, "motivation_part4"), align="left"),
+                cell(t(chat_id, "guide_part1"), align="left"),
+                cell(t(chat_id, "guide_part2"), align="left"),
+                cell(t(chat_id, "guide_part3"), align="left"),
+                cell(t(chat_id, "guide_part4"), align="left"),
             ],
         ],
         is_bordered=True,
@@ -299,7 +299,7 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
 
     return InputRichMessage(blocks=[
         alpha_table,
-        motivation_table,
+        guide_table,
     ])
 
 
