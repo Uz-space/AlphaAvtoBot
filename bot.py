@@ -76,6 +76,7 @@ def get_user_settings(chat_id: int) -> dict:
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "ALPHA",
+        "motivation_label": "💡 Motivatsiya",
         "motivation_text": "🚀 Har bir qadam katta yutuqqa boshlaydi — sabr va izchillik bilan davom eting, natija albatta keladi!",
         "col_account": "Akkauntlar",
         "col_next_claim": "Keyingi olish",
@@ -133,6 +134,7 @@ TEXTS = {
     },
     "uz_cyrillic": {
         "dashboard_title": "ALPHA",
+        "motivation_label": "💡 Мотивация",
         "motivation_text": "🚀 Ҳар бир қадам катта ютуққа бошлайди — сабр ва изчиллик билан давом этинг, натижа албатта келади!",
         "col_account": "Аккаунтлар",
         "col_next_claim": "Кейинги олиш",
@@ -263,51 +265,18 @@ def build_main_rich_message(chat_id: int) -> InputRichMessage:
         is_striped=True,
     )
 
-    # Sarlavha qatori - 3 ustun: Akkauntlar / Keyingi olish / Balanslari
-    header_row = [
-        cell(t(chat_id, "col_account"), header=True),
-        cell(t(chat_id, "col_next_claim"), header=True, align="center"),
-        cell(t(chat_id, "col_balance"), header=True, align="right"),
-    ]
-
-    data_rows = []
-    for crane in CRANES:
-        accounts = crane.get("accounts", [])
-        crane_timer = get_crane_timer(crane['name'])
-
-        if not accounts:
-            data_rows.append([
-                cell(crane['name']),
-                cell(get_countdown(crane_timer), align="center"),
-                cell("0.000000", align="right"),
-            ])
-        else:
-            for acc in accounts:
-                email = acc.get("email", "Unknown")
-                balance = acc.get("balance", 0.0)
-                countdown = get_account_countdown(acc.get("next_claim_at"))
-                data_rows.append([
-                    cell(email),
-                    cell(countdown, align="center"),
-                    cell(f"{balance:.6f}", align="right"),
-                ])
-
-    data_table = InputRichBlockTable(
-        cells=[header_row, *data_rows],
-        is_bordered=True,
-        is_striped=True,
-    )
-
-    # Motivatsion matn - alohida, mustaqil jadval
+    # Motivatsiya - 1 ustunli jadval: tepasida sarlavha, pastida matn
     motivation_table = InputRichBlockTable(
-        cells=[[cell(t(chat_id, "motivation_text"), align="center")]],
+        cells=[
+            [cell(t(chat_id, "motivation_label"), header=True, align="center")],
+            [cell(t(chat_id, "motivation_text"), align="center")],
+        ],
         is_bordered=True,
         is_striped=True,
     )
 
     return InputRichMessage(blocks=[
         alpha_table,
-        data_table,
         motivation_table,
     ])
 
