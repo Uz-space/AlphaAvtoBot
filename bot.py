@@ -109,7 +109,7 @@ TEXTS = {
         "crane_no_claims_yet": "⏳ Hali olishlar yo'q...",
 
         "stats_col_account": "🏷️Akkaunt",
-        "stats_col_next_claim": "⏱️Keyingi olish",
+        "stats_col_next_claim": "⏱️ Keyingi olish",
         "stats_col_balance": "💰Balans",
 
         "add_account_title": "{emoji} Akkaunt qo'shish - {crane}",
