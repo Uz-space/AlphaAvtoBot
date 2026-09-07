@@ -108,9 +108,9 @@ TEXTS = {
         "crane_no_accounts": "Faol akkaunt yo'q - qo'shish uchun + bosing",
         "crane_no_claims_yet": "⏳ Hali olishlar yo'q...",
 
-        "stats_col_account": "🏷️ Akkaunt",
-        "stats_col_next_claim": "⏱️ Keyingi olish",
-        "stats_col_balance": "💰 Balans",
+        "stats_col_account": "🏷️Akkaunt",
+        "stats_col_next_claim": "⏱️Keyingi olish",
+        "stats_col_balance": "💰Balans",
 
         "add_account_title": "{emoji} Akkaunt qo'shish - {crane}",
         "field_label": "Belgi: {label}",
