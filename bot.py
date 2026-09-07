@@ -23,7 +23,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 import requests as req_lib
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.CRITICAL)
 
 BOT_TOKEN = "8609710969:AAGXxcahH3xRET51brLJCOdPVNl226e_co8"
 
@@ -693,6 +693,7 @@ async def show_rich(chat_id: int, rich_message: InputRichMessage, reply_markup: 
                 await bot.delete_message(chat_id=chat_id, message_id=msg_id)
             except Exception:
                 pass
+            active_messages.pop(chat_id, None)
     msg = await bot.send_rich_message(chat_id=chat_id, rich_message=rich_message, reply_markup=reply_markup)
     active_messages[chat_id] = msg.message_id
 
