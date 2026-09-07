@@ -1,13 +1,16 @@
+import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
-import logging
+from aiogram.utils import executor
 
-TOKEN = "8609710969:AAGXxcahH3xRET51brLJCOdPVNl226e_co8"
-bot = Bot(token=TOKEN)
+# ✅ TOKENNI O'ZINGIZNING BOT TOKENI BILAN ALMASHTIRING
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"
+
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
+
 logging.basicConfig(level=logging.INFO)
-dp.middleware.setup(LoggingMiddleware())
 
 # ✅ Asosiy tugmalar (doimiy)
 def main_keyboard():
@@ -74,6 +77,6 @@ async def maker_section(message: types.Message):
 async def send_message(message: types.Message):
     await message.answer("✉️ Xabar yozish bo'limi.", reply_markup=main_keyboard())
 
+# ✅ Botni ishga tushirish
 if __name__ == "__main__":
-    from aiogram import executor
     executor.start_polling(dp, skip_updates=True)
