@@ -15,9 +15,8 @@ from aiogram.enums import ButtonStyle
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
     InputRichMessage, InputRichBlockTable, InputRichBlockPreformatted,
+    RichBlockTableCell, RichTextBold,
 )
-from aiogram.types.rich_block_table_cell import RichBlockTableCell
-from aiogram.types.rich_text_plain import RichTextPlain
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -27,7 +26,6 @@ logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = "8609710969:AAGXxcahH3xRET51brLJCOdPVNl226e_co8"
 
-# ─── PICK NETWORK KONFIGURATSIYASI ───────────────────────────────────────────
 PICK_CONFIGS = {
     "TronPick": {
         "domain": "tronpick.io",
@@ -49,30 +47,29 @@ PICK_CONFIGS = {
     }
 }
 
-# ─── KRANLAR ──────────────────────────────────────────────────────────────────
 CRANES = []
-for name, config in PICK_CONFIGS.items():
-    emoji = "💎" if "Tron" in name else "🔵" if "Lite" in name else "🐕"
+for _name, _config in PICK_CONFIGS.items():
+    _emoji = "💎" if "Tron" in _name else "🔵" if "Lite" in _name else "🐕"
     CRANES.append({
-        "name": name,
-        "emoji": emoji,
+        "name": _name,
+        "emoji": _emoji,
         "active": False,
         "claims": 0,
-        "balance": 0,
         "accounts": [],
         "logs": [],
-        "config": config
+        "config": _config
     })
 
-# ─── FSM STATES ──────────────────────────────────────────────────────────────
+
 class AddAccount(StatesGroup):
     email = State()
     password = State()
 
+
 class SettingsFSM(StatesGroup):
     api_key = State()
 
-# ─── SETTINGS ─────────────────────────────────────────────────────────────────
+
 USER_SETTINGS: dict[int, dict] = {}
 
 LANGUAGES = {
@@ -80,12 +77,6 @@ LANGUAGES = {
     "uz_cyrillic": "🇺🇿 Ўзбекча (кирилл)"
 }
 
-def get_user_settings(chat_id: int) -> dict:
-    if chat_id not in USER_SETTINGS:
-        USER_SETTINGS[chat_id] = {"api_key": None, "language": "uz_latin"}
-    return USER_SETTINGS[chat_id]
-
-# ─── TARJIMALAR ──────────────────────────────────────────────────────────────
 TEXTS = {
     "uz_latin": {
         "dashboard_title": "🚀 PICK MULTI-BOT",
@@ -118,7 +109,6 @@ TEXTS = {
         "account_added": "✅ Akkaunt qo'shildi!",
         "next_claim_in": "Keyingi olish: 60:00",
         "settings_title": "⚙️ Sozlamalar",
-        "api_key_set": "✅ O'rnatilgan",
         "api_key_not_set": "❌ O'rnatilmagan",
         "send_api_key": "🔑 XEVIL API kalitingizni yuboring:",
         "api_key_saved": "✅ API Kalit saqlandi!",
@@ -162,7 +152,6 @@ TEXTS = {
         "account_added": "✅ Аккаунт қўшилди!",
         "next_claim_in": "Кейинги олиш: 60:00",
         "settings_title": "⚙️ Созламалар",
-        "api_key_set": "✅ Ўрнатилган",
         "api_key_not_set": "❌ Ўрнатилмаган",
         "send_api_key": "🔑 XEVIL API калитингизни юборинг:",
         "api_key_saved": "✅ API Калит сақланди!",
@@ -177,26 +166,35 @@ TEXTS = {
     }
 }
 
+
+def get_user_settings(chat_id: int) -> dict:
+    if chat_id not in USER_SETTINGS:
+        USER_SETTINGS[chat_id] = {"api_key": None, "language": "uz_latin"}
+    return USER_SETTINGS[chat_id]
+
+
 def t(chat_id: int, key: str, **kwargs) -> str:
     lang = get_user_settings(chat_id).get("language", "uz_latin")
     table = TEXTS.get(lang, TEXTS["uz_latin"])
     template = table.get(key, TEXTS["uz_latin"].get(key, key))
     return template.format(**kwargs) if kwargs else template
 
-# ─── RICH TEXT HELPER ────────────────────────────────────────────────────────
-def rt(text: str) -> RichTextPlain:
-    """Plain string → RichTextPlain — the only valid type for cell text."""
-    return RichTextPlain(text=text)
+
+def rt(text: str) -> RichTextBold:
+    """str -> RichTextBold (RichTextPlain mavjud emas bu versiyada)."""
+    return RichTextBold(text=text)
+
 
 def cell(text: str, header: bool = False, align: str = "left") -> RichBlockTableCell:
     return RichBlockTableCell(
         align=align,
         valign="middle",
         text=rt(text),
-        is_header=header if header else None,
+        is_header=True if header else None,
     )
 
-# ─── PICK BOT CLASS ──────────────────────────────────────────────────────────
+
+# ─── PICK BOT ────────────────────────────────────────────────────────────────
 class PickBot:
     def __init__(self, email: str, password: str, api_key: str, config: dict):
         self.session = requests.Session()
@@ -206,7 +204,6 @@ class PickBot:
         self.config = config
         self.domain = config['domain']
         self.balance = "0.00000000"
-        self.next_claim = 0
         self.claim_time_remaining = 0
         self.is_logged_in = False
         self.fp = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
@@ -252,15 +249,12 @@ class PickBot:
         try:
             self.session.cookies.set('fp', self.fp, domain=self.domain)
             self.session.get(f"https://{self.domain}/login.php", headers={'User-Agent': self.ua}, timeout=20)
-
             csrf = self.session.cookies.get('csrf_cookie_name')
             if not csrf:
                 return False, "CSRF Missing"
-
             token = self.solve_captcha()
             if not token:
                 return False, "Captcha Failed"
-
             payload = {
                 'action': "login",
                 'email': self.email,
@@ -274,12 +268,9 @@ class PickBot:
                 'ic-rq': '', 'ic-wid': '', 'ic-cid': '', 'ic-hp': '',
                 'h-captcha-response': '', 'pcaptcha_token': ''
             }
-
             response = self.session.post(
                 f"https://{self.domain}/process.php",
-                data=payload,
-                headers=self.headers,
-                timeout=30
+                data=payload, headers=self.headers, timeout=30
             )
             res = response.json()
             if res.get('ret') == 1:
@@ -293,19 +284,13 @@ class PickBot:
         try:
             res = self.session.get(
                 f"https://{self.domain}/faucet.php",
-                headers={'User-Agent': self.ua},
-                timeout=20
+                headers={'User-Agent': self.ua}, timeout=20
             )
             bal = re.search(r'user_balance">([\d.]+)', res.text)
             if bal:
                 self.balance = bal.group(1)
             tmr = re.search(r'show_countdown_clock\((\d+)\)', res.text)
-            if tmr:
-                self.next_claim = int(tmr.group(1))
-                self.claim_time_remaining = self.next_claim
-            else:
-                self.next_claim = 0
-                self.claim_time_remaining = 0
+            self.claim_time_remaining = int(tmr.group(1)) if tmr else 0
         except Exception:
             pass
 
@@ -314,11 +299,9 @@ class PickBot:
             token = self.solve_captcha()
             if not token:
                 return False, "Captcha failed"
-
             csrf = self.session.cookies.get('csrf_cookie_name')
             if not csrf:
                 return False, "No CSRF"
-
             ts = int(time.time())
             data_str = f"{random.randint(100, 200)}:{random.randint(10, 50)}:{ts}"
             xor_key = self.config['xor_key']
@@ -328,7 +311,6 @@ class PickBot:
                     for i, c in enumerate(data_str)
                 ).encode()
             ).decode()
-
             payload = {
                 'action': 'claim_hourly_faucet',
                 'hash': hashed,
@@ -336,12 +318,9 @@ class PickBot:
                 'c_captcha_response': token,
                 'csrf_test_name': csrf
             }
-
             res = self.session.post(
                 f"https://{self.domain}/process.php",
-                data=payload,
-                headers=self.headers,
-                timeout=30
+                data=payload, headers=self.headers, timeout=30
             )
             res_json = res.json()
             if res_json.get('ret') == 1:
@@ -353,26 +332,24 @@ class PickBot:
         except Exception as e:
             return False, str(e)
 
-# ─── WORKER THREAD ──────────────────────────────────────────────────────────
+
+# ─── WORKER ──────────────────────────────────────────────────────────────────
 STOP_EVENTS: dict[str, threading.Event] = {}
+
 
 def pick_bot_worker(crane_name: str, account_index: int, stop_event: threading.Event, chat_id: int) -> None:
     crane = next((c for c in CRANES if c["name"] == crane_name), None)
     if not crane:
         return
-
     account = crane['accounts'][account_index]
-    config = crane['config']
     api_key = get_user_settings(chat_id).get('api_key')
-
     if not api_key:
         add_log(crane, f"❌ No API key for {account['email']}")
         return
 
-    bot_instance = PickBot(account['email'], account['password'], api_key, config)
-
-    success, msg = bot_instance.login()
-    if success:
+    bot_instance = PickBot(account['email'], account['password'], api_key, crane['config'])
+    ok, msg = bot_instance.login()
+    if ok:
         add_log(crane, f"✅ {account['email']} logged in")
         account['active'] = True
     else:
@@ -383,127 +360,111 @@ def pick_bot_worker(crane_name: str, account_index: int, stop_event: threading.E
     while not stop_event.is_set():
         try:
             bot_instance.update_info()
-
             if bot_instance.claim_time_remaining <= 0:
-                add_log(crane, f"⏳ Claiming {config['coin']} for {account['email']}...")
+                add_log(crane, f"⏳ Claiming for {account['email']}...")
                 ok, claim_msg = bot_instance.claim()
                 if ok:
                     account['balance'] = float(bot_instance.balance)
                     crane['claims'] += 1
-                    add_log(crane, f"✅ {account['email']} claimed {config['coin']}: {claim_msg}")
+                    add_log(crane, f"✅ {account['email']} claimed: {claim_msg}")
                 else:
-                    add_log(crane, f"❌ {account['email']} claim failed: {claim_msg}")
-
+                    add_log(crane, f"❌ {account['email']} failed: {claim_msg}")
                 bot_instance.claim_time_remaining = 3600
                 account['next_claim_at'] = datetime.now(timezone.utc) + timedelta(minutes=60)
-
             time.sleep(1)
-
         except Exception as e:
-            add_log(crane, f"⚠️ {account['email']} error: {str(e)}")
+            add_log(crane, f"⚠️ {account['email']}: {str(e)}")
             time.sleep(10)
+
 
 # ─── HELPERS ─────────────────────────────────────────────────────────────────
 def get_crane(name: str) -> dict | None:
     return next((c for c in CRANES if c["name"] == name), None)
 
+
 def add_log(crane: dict, text: str) -> None:
-    crane.setdefault("logs", []).append({
-        "time": datetime.now().strftime("%H:%M:%S"),
-        "text": text,
-    })
+    crane.setdefault("logs", []).append({"time": datetime.now().strftime("%H:%M:%S"), "text": text})
     crane["logs"] = crane["logs"][-20:]
 
-def format_countdown(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    minutes, secs = divmod(seconds, 60)
-    return f"{minutes:02d}:{secs:02d}"
 
 def get_account_countdown(next_claim_at) -> str:
     if not next_claim_at:
         return "--:--"
     remaining = (next_claim_at - datetime.now(timezone.utc)).total_seconds()
     if remaining <= 0:
-        return "🟢 Ready"
-    return format_countdown(remaining)
+        return "Ready"
+    m, s = divmod(int(remaining), 60)
+    return f"{m:02d}:{s:02d}"
+
 
 def cancel_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_add", style=ButtonStyle.DANGER)]
     ])
 
+
 def settings_cancel_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t(chat_id, "btn_cancel"), callback_data="cancel_settings", style=ButtonStyle.DANGER)]
     ])
 
+
 def build_language_keyboard(chat_id: int) -> InlineKeyboardMarkup:
-    buttons = [[InlineKeyboardButton(text=name, callback_data=f"lang_{code}")] for code, name in LANGUAGES.items()]
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=name, callback_data=f"lang_{code}")]
+        for code, name in LANGUAGES.items()
+    ])
+
 
 # ─── RICH MESSAGE BUILDERS ───────────────────────────────────────────────────
 def build_main_rich_message(chat_id: int) -> InputRichMessage:
     total_accounts = sum(len(c.get("accounts", [])) for c in CRANES)
     total_claims = sum(c.get("claims", 0) for c in CRANES)
 
-    # Header table
     title_table = InputRichBlockTable(
         cells=[[cell(t(chat_id, "dashboard_title"), header=True, align="center")]],
         is_bordered=True,
-        is_striped=False,
     )
 
-    # Stats summary table
-    stat_rows = [
-        [
-            cell(t(chat_id, "col_crane"), header=True, align="center"),
-            cell(t(chat_id, "col_accounts"), header=True, align="center"),
-            cell(t(chat_id, "col_status"), header=True, align="center"),
-            cell(t(chat_id, "col_balance"), header=True, align="right"),
-        ]
-    ]
+    rows = [[
+        cell(t(chat_id, "col_crane"), header=True, align="left"),
+        cell(t(chat_id, "col_accounts"), header=True, align="center"),
+        cell(t(chat_id, "col_status"), header=True, align="center"),
+        cell(t(chat_id, "col_balance"), header=True, align="right"),
+    ]]
     for crane in CRANES:
         balance = sum(a.get("balance", 0.0) for a in crane.get("accounts", []))
-        status = "🟢 ON" if crane["active"] else "🔴 OFF"
-        stat_rows.append([
+        rows.append([
             cell(f"{crane['emoji']} {crane['name']}", align="left"),
             cell(str(len(crane["accounts"])), align="center"),
-            cell(status, align="center"),
+            cell("🟢 ON" if crane["active"] else "🔴 OFF", align="center"),
             cell(f"{balance:.6f}", align="right"),
         ])
-
-    # Totals row
-    stat_rows.append([
+    rows.append([
         cell("TOTAL", header=True, align="left"),
         cell(str(total_accounts), header=True, align="center"),
         cell(f"Claims: {total_claims}", header=True, align="center"),
         cell("", header=True, align="right"),
     ])
 
-    stats_table = InputRichBlockTable(
-        cells=stat_rows,
-        is_bordered=True,
-        is_striped=True,
-    )
-
+    stats_table = InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True)
     return InputRichMessage(blocks=[title_table, stats_table])
+
 
 def build_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     buttons = []
     row = []
     for c in CRANES:
-        btn = InlineKeyboardButton(
+        row.append(InlineKeyboardButton(
             text=f"{c['emoji']} {c['name']}",
             callback_data=f"crane_{c['name']}",
             style=ButtonStyle.PRIMARY,
-        )
-        row.append(btn)
+        ))
         if len(row) == 2:
             buttons.append(row)
             row = []
     if row:
         buttons.append(row)
-
     buttons.append([
         InlineKeyboardButton(text=t(chat_id, "start_all"), callback_data="start_all", style=ButtonStyle.SUCCESS),
         InlineKeyboardButton(text=t(chat_id, "stop_all"), callback_data="stop_all", style=ButtonStyle.DANGER),
@@ -513,20 +474,17 @@ def build_keyboard(chat_id: int) -> InlineKeyboardMarkup:
         InlineKeyboardButton(text=t(chat_id, "btn_refresh"), callback_data="refresh", style=ButtonStyle.SUCCESS),
     ])
     buttons.append([
-        InlineKeyboardButton(text=t(chat_id, "btn_support"), url="https://t.me/alphadevlab", style=ButtonStyle.DANGER),
+        InlineKeyboardButton(text=t(chat_id, "btn_support"), url="https://t.me/alphadevlab"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+
 def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
     blocks = []
-
-    # Title
-    title_table = InputRichBlockTable(
+    blocks.append(InputRichBlockTable(
         cells=[[cell(f"{crane['emoji']} {crane['name']}", header=True, align="center")]],
         is_bordered=True,
-        is_striped=False,
-    )
-    blocks.append(title_table)
+    ))
 
     accounts = crane.get("accounts", [])
     if accounts:
@@ -537,27 +495,15 @@ def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
             cell(t(chat_id, "stats_col_status"), header=True, align="center"),
         ]]
         for acc in accounts:
-            email_short = acc.get("email", "Unknown")[:18]
-            balance = acc.get("balance", 0.0)
-            countdown = get_account_countdown(acc.get("next_claim_at"))
-            status = "🟢" if acc.get("active", False) else "🔴"
             rows.append([
-                cell(email_short, align="left"),
-                cell(countdown, align="center"),
-                cell(f"{balance:.8f}", align="right"),
-                cell(status, align="center"),
+                cell(acc.get("email", "")[:18], align="left"),
+                cell(get_account_countdown(acc.get("next_claim_at")), align="center"),
+                cell(f"{acc.get('balance', 0.0):.8f}", align="right"),
+                cell("🟢" if acc.get("active") else "🔴", align="center"),
             ])
-
-        acc_table = InputRichBlockTable(
-            cells=rows,
-            is_bordered=True,
-            is_striped=True,
-        )
-        blocks.append(acc_table)
+        blocks.append(InputRichBlockTable(cells=rows, is_bordered=True, is_striped=True))
     else:
-        blocks.append(InputRichBlockPreformatted(
-            text=rt(t(chat_id, "crane_no_accounts"))
-        ))
+        blocks.append(InputRichBlockPreformatted(text=rt(t(chat_id, "crane_no_accounts"))))
 
     logs = crane.get("logs", [])
     if logs:
@@ -565,6 +511,7 @@ def build_crane_rich_message(chat_id: int, crane: dict) -> InputRichMessage:
         blocks.append(InputRichBlockPreformatted(text=rt(log_text)))
 
     return InputRichMessage(blocks=blocks)
+
 
 def build_crane_keyboard(chat_id: int, crane_name: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -579,6 +526,7 @@ def build_crane_keyboard(chat_id: int, crane_name: str) -> InlineKeyboardMarkup:
         ],
     ])
 
+
 def build_settings_rich_message(chat_id: int) -> InputRichMessage:
     s = get_user_settings(chat_id)
     api_key = s.get("api_key")
@@ -588,9 +536,7 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
     title_table = InputRichBlockTable(
         cells=[[cell(t(chat_id, "settings_title"), header=True, align="center")]],
         is_bordered=True,
-        is_striped=False,
     )
-
     info_table = InputRichBlockTable(
         cells=[
             [
@@ -607,8 +553,8 @@ def build_settings_rich_message(chat_id: int) -> InputRichMessage:
         is_bordered=True,
         is_striped=True,
     )
-
     return InputRichMessage(blocks=[title_table, info_table])
+
 
 def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -617,23 +563,22 @@ def build_settings_keyboard(chat_id: int) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=t(chat_id, "btn_back"), callback_data="back_main", style=ButtonStyle.SUCCESS)],
     ])
 
-# ─── BOT INSTANCE ────────────────────────────────────────────────────────────
+
+# ─── BOT ─────────────────────────────────────────────────────────────────────
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 active_messages: dict[int, int] = {}
 active_screen: dict[int, str] = {}
 
-# ─── DISPLAY HELPERS ─────────────────────────────────────────────────────────
+
 async def show_rich(chat_id: int, rich_message: InputRichMessage, reply_markup: InlineKeyboardMarkup | None = None) -> None:
     msg_id = active_messages.get(chat_id)
     if msg_id:
         try:
             await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=msg_id,
-                rich_message=rich_message,
-                reply_markup=reply_markup,
+                chat_id=chat_id, message_id=msg_id,
+                rich_message=rich_message, reply_markup=reply_markup,
             )
             return
         except Exception:
@@ -644,15 +589,14 @@ async def show_rich(chat_id: int, rich_message: InputRichMessage, reply_markup: 
     msg = await bot.send_rich_message(chat_id=chat_id, rich_message=rich_message, reply_markup=reply_markup)
     active_messages[chat_id] = msg.message_id
 
+
 async def show_text(chat_id: int, text: str, reply_markup: InlineKeyboardMarkup | None = None) -> None:
     msg_id = active_messages.get(chat_id)
     if msg_id:
         try:
             await bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=msg_id,
-                text=text,
-                reply_markup=reply_markup,
+                chat_id=chat_id, message_id=msg_id,
+                text=text, reply_markup=reply_markup,
             )
             return
         except Exception:
@@ -663,13 +607,14 @@ async def show_text(chat_id: int, text: str, reply_markup: InlineKeyboardMarkup 
     msg = await bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
     active_messages[chat_id] = msg.message_id
 
+
 async def delete_silently(message: Message) -> None:
     try:
         await message.delete()
     except Exception:
         pass
 
-# ─── AUTO REFRESH ────────────────────────────────────────────────────────────
+
 async def auto_refresh() -> None:
     while True:
         await asyncio.sleep(5)
@@ -677,15 +622,15 @@ async def auto_refresh() -> None:
             if active_screen.get(chat_id) == "dashboard":
                 try:
                     await bot.edit_message_text(
-                        chat_id=chat_id,
-                        message_id=msg_id,
+                        chat_id=chat_id, message_id=msg_id,
                         rich_message=build_main_rich_message(chat_id),
                         reply_markup=build_keyboard(chat_id),
                     )
                 except Exception:
                     pass
 
-# ─── COMMANDS ────────────────────────────────────────────────────────────────
+
+# ─── HANDLERS ────────────────────────────────────────────────────────────────
 @dp.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext) -> None:
     await state.clear()
@@ -693,6 +638,7 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await delete_silently(message)
     active_screen[chat_id] = "dashboard"
     await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
+
 
 @dp.message(Command("cancel"))
 async def cmd_cancel(message: Message, state: FSMContext) -> None:
@@ -702,7 +648,7 @@ async def cmd_cancel(message: Message, state: FSMContext) -> None:
     active_screen[chat_id] = "dashboard"
     await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
 
-# ─── CALLBACKS ───────────────────────────────────────────────────────────────
+
 @dp.callback_query(F.data == "refresh")
 async def cb_refresh(call: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
@@ -710,6 +656,7 @@ async def cb_refresh(call: CallbackQuery, state: FSMContext) -> None:
     active_screen[chat_id] = "dashboard"
     await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
     await call.answer(t(chat_id, "updated"))
+
 
 @dp.callback_query(F.data == "back_main")
 async def cb_back_main(call: CallbackQuery, state: FSMContext) -> None:
@@ -719,8 +666,9 @@ async def cb_back_main(call: CallbackQuery, state: FSMContext) -> None:
     await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
     await call.answer()
 
+
 @dp.callback_query(F.data.startswith("crane_"))
-async def cb_crane(call: CallbackQuery, state: FSMContext) -> None:
+async def cb_crane(call: CallbackQuery) -> None:
     crane_name = call.data.replace("crane_", "")
     crane = get_crane(crane_name)
     chat_id = call.message.chat.id
@@ -731,6 +679,7 @@ async def cb_crane(call: CallbackQuery, state: FSMContext) -> None:
     await show_rich(chat_id, build_crane_rich_message(chat_id, crane), build_crane_keyboard(chat_id, crane_name))
     await call.answer()
 
+
 @dp.callback_query(F.data == "start_all")
 async def cb_start_all(call: CallbackQuery) -> None:
     chat_id = call.message.chat.id
@@ -738,63 +687,55 @@ async def cb_start_all(call: CallbackQuery) -> None:
     if not api_key:
         await call.answer(t(chat_id, "no_api_key"), show_alert=True)
         return
-
     started = 0
     for crane in CRANES:
         for idx, acc in enumerate(crane.get("accounts", [])):
             key = f"{crane['name']}_{idx}"
             if key not in STOP_EVENTS or STOP_EVENTS[key].is_set():
                 STOP_EVENTS[key] = threading.Event()
-                thread = Thread(
+                Thread(
                     target=pick_bot_worker,
                     args=(crane['name'], idx, STOP_EVENTS[key], chat_id),
                     daemon=True,
-                )
-                thread.start()
+                ).start()
                 started += 1
                 crane["active"] = True
                 acc["active"] = True
                 add_log(crane, f"🚀 Started: {acc['email']}")
-
     await call.answer(t(chat_id, "started", count=started))
     active_screen[chat_id] = "dashboard"
     await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
+
 
 @dp.callback_query(F.data == "stop_all")
 async def cb_stop_all(call: CallbackQuery) -> None:
     chat_id = call.message.chat.id
     stopped = 0
-
     for key in list(STOP_EVENTS.keys()):
         STOP_EVENTS[key].set()
         del STOP_EVENTS[key]
         stopped += 1
-
     for crane in CRANES:
         crane["active"] = False
         for acc in crane.get("accounts", []):
             acc["active"] = False
             add_log(crane, f"⏹️ Stopped: {acc['email']}")
-
     await call.answer(t(chat_id, "stopped", count=stopped))
     active_screen[chat_id] = "dashboard"
     await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
 
-# ─── ADD ACCOUNT ─────────────────────────────────────────────────────────────
+
 @dp.callback_query(F.data.startswith("add_account_"))
 async def cb_add_account(call: CallbackQuery, state: FSMContext) -> None:
     crane_name = call.data.replace("add_account_", "")
     crane = get_crane(crane_name)
     chat_id = call.message.chat.id
-
     if not crane:
         await call.answer(t(chat_id, "not_found"), show_alert=True)
         return
-
     await state.set_state(AddAccount.email)
     await state.update_data(crane_name=crane_name)
     active_screen[chat_id] = "add_account"
-
     text = (
         f"{t(chat_id, 'add_account_title', emoji=crane['emoji'], crane=crane_name)}\n\n"
         f"{t(chat_id, 'add_account_send_email')}\n\n"
@@ -803,54 +744,50 @@ async def cb_add_account(call: CallbackQuery, state: FSMContext) -> None:
     await show_text(chat_id, text, cancel_keyboard(chat_id))
     await call.answer()
 
+
 @dp.message(AddAccount.email)
 async def fsm_email(message: Message, state: FSMContext) -> None:
-    email = await require_text(message)
-    if email is None:
+    if not message.text:
+        await message.answer(t(message.chat.id, "plain_text_warning"))
         return
-    await state.update_data(email=email)
+    await state.update_data(email=message.text.strip())
     await state.set_state(AddAccount.password)
     chat_id = message.chat.id
     await delete_silently(message)
-
     text = (
-        f"{t(chat_id, 'email_line', email=email)}\n\n"
+        f"{t(chat_id, 'email_line', email=message.text.strip())}\n\n"
         f"{t(chat_id, 'send_password')}\n\n"
         f"{t(chat_id, 'cancel_hint')}"
     )
     await show_text(chat_id, text, cancel_keyboard(chat_id))
 
+
 @dp.message(AddAccount.password)
 async def fsm_password(message: Message, state: FSMContext) -> None:
-    password = await require_text(message)
-    if password is None:
+    if not message.text:
+        await message.answer(t(message.chat.id, "plain_text_warning"))
         return
-    await state.update_data(password=password)
-    await delete_silently(message)
-    await finish_add_account(message, state)
-
-async def finish_add_account(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     crane_name = data["crane_name"]
     email = data["email"]
-    password = data["password"]
+    password = message.text.strip()
+    await delete_silently(message)
 
     crane = get_crane(crane_name)
     if not crane:
         await state.clear()
         return
 
-    acc_num = len(crane["accounts"]) + 1
-    new_acc = {
-        "label": f"Account {acc_num}",
+    crane["accounts"].append({
+        "label": f"Account {len(crane['accounts']) + 1}",
         "email": email,
         "password": password,
         "active": False,
         "balance": 0.0,
         "next_claim_at": datetime.now(timezone.utc) + timedelta(minutes=60),
-    }
-    crane["accounts"].append(new_acc)
+    })
     add_log(crane, f"📝 Added: {email}")
+    await state.clear()
 
     chat_id = message.chat.id
     summary = (
@@ -861,15 +798,13 @@ async def finish_add_account(message: Message, state: FSMContext) -> None:
         f"⏱️ {t(chat_id, 'next_claim_in')}\n\n"
         f"▶️ Akkauntni ishga tushirish uchun 'Hammani ishga tushirish' tugmasini bosing!"
     )
-
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=t(chat_id, "btn_back_to_crane", crane=crane_name), callback_data=f"crane_{crane_name}", style=ButtonStyle.SUCCESS)],
         [InlineKeyboardButton(text=t(chat_id, "btn_main_menu"), callback_data="back_main")],
     ])
-
-    await state.clear()
     active_screen[chat_id] = "account_added"
     await show_text(chat_id, summary, keyboard)
+
 
 @dp.callback_query(F.data == "cancel_add")
 async def cb_cancel_add(call: CallbackQuery, state: FSMContext) -> None:
@@ -877,7 +812,6 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext) -> None:
     crane_name = data.get("crane_name", "")
     await state.clear()
     chat_id = call.message.chat.id
-
     crane = get_crane(crane_name)
     if crane:
         active_screen[chat_id] = f"crane:{crane_name}"
@@ -885,16 +819,9 @@ async def cb_cancel_add(call: CallbackQuery, state: FSMContext) -> None:
     else:
         active_screen[chat_id] = "dashboard"
         await show_rich(chat_id, build_main_rich_message(chat_id), build_keyboard(chat_id))
-
     await call.answer(t(chat_id, "cancelled"))
 
-async def require_text(message: Message) -> str | None:
-    if not message.text:
-        await message.answer(t(message.chat.id, "plain_text_warning"))
-        return None
-    return message.text.strip()
 
-# ─── SETTINGS ────────────────────────────────────────────────────────────────
 @dp.callback_query(F.data == "settings")
 async def cb_settings(call: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
@@ -902,6 +829,7 @@ async def cb_settings(call: CallbackQuery, state: FSMContext) -> None:
     active_screen[chat_id] = "settings"
     await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await call.answer()
+
 
 @dp.callback_query(F.data == "settings_api_key")
 async def cb_settings_api_key(call: CallbackQuery, state: FSMContext) -> None:
@@ -912,12 +840,13 @@ async def cb_settings_api_key(call: CallbackQuery, state: FSMContext) -> None:
     await show_text(chat_id, text, settings_cancel_keyboard(chat_id))
     await call.answer()
 
+
 @dp.message(SettingsFSM.api_key)
 async def fsm_settings_api_key(message: Message, state: FSMContext) -> None:
-    api_key = await require_text(message)
-    if api_key is None:
+    if not message.text:
+        await message.answer(t(message.chat.id, "plain_text_warning"))
         return
-    get_user_settings(message.chat.id)["api_key"] = api_key
+    get_user_settings(message.chat.id)["api_key"] = message.text.strip()
     await state.clear()
     chat_id = message.chat.id
     await delete_silently(message)
@@ -925,12 +854,14 @@ async def fsm_settings_api_key(message: Message, state: FSMContext) -> None:
     await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await message.answer(t(chat_id, "api_key_saved"))
 
+
 @dp.callback_query(F.data == "settings_language")
 async def cb_settings_language(call: CallbackQuery) -> None:
     chat_id = call.message.chat.id
     active_screen[chat_id] = "settings_language"
     await show_text(chat_id, t(chat_id, "choose_language"), build_language_keyboard(chat_id))
     await call.answer()
+
 
 @dp.callback_query(F.data.startswith("lang_"))
 async def cb_lang_select(call: CallbackQuery) -> None:
@@ -944,6 +875,7 @@ async def cb_lang_select(call: CallbackQuery) -> None:
     await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await call.answer(f"✅ {LANGUAGES[code]}")
 
+
 @dp.callback_query(F.data == "cancel_settings")
 async def cb_cancel_settings(call: CallbackQuery, state: FSMContext) -> None:
     await state.clear()
@@ -952,10 +884,12 @@ async def cb_cancel_settings(call: CallbackQuery, state: FSMContext) -> None:
     await show_rich(chat_id, build_settings_rich_message(chat_id), build_settings_keyboard(chat_id))
     await call.answer(t(chat_id, "cancelled"))
 
+
 # ─── MAIN ────────────────────────────────────────────────────────────────────
 async def main() -> None:
     asyncio.create_task(auto_refresh())
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
