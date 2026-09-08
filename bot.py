@@ -26,7 +26,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 logging.basicConfig(level=logging.INFO)
 
-BOT_TOKEN = "8609710969:AAGXxcahH3xRET51brLJCOdPVNl226e_co8"
+BOT_TOKEN = "8609710969:AAFeYU681TDYC2youGJ6TEmlzfyZvERUG-s"
 
 # ─── PICK NETWORK CONFIG ─────────────────────────────────────────────────────
 PICK_CONFIGS = {
